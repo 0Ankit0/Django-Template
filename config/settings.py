@@ -32,7 +32,21 @@ ALLOWED_HOSTS = []
 
 # Application definition
 
+
+# Auto Discover apps in the project
+discovered_apps = []
+APPS_DIR = os.path.join(BASE_DIR, 'apps')
+for app_name in os.listdir(APPS_DIR):
+    app_path = os.path.join(APPS_DIR, app_name)
+    if os.path.isdir(app_path) and os.path.isfile(os.path.join(app_path, '__init__.py')):
+        try:
+            importlib.import_module(app_name)
+            discovered_apps.append(app_name)
+        except ImportError as e:
+            print(f"Could not import app {app_name}: {e}") 
+
 INSTALLED_APPS = [
+    *discovered_apps,
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -41,16 +55,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 ]
 
-# Auto Discover apps in the project
-APPS_DIR = os.path.join(BASE_DIR, 'apps')
-for app_name in os.listdir(APPS_DIR):
-    app_path = os.path.join(APPS_DIR, app_name)
-    if os.path.isdir(app_path) and os.path.isfile(os.path.join(app_path, '__init__.py')):
-        try:
-            importlib.import_module(app_name)
-            INSTALLED_APPS.append(app_name)
-        except ImportError as e:
-            print(f"Could not import app {app_name}: {e}")
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
