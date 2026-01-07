@@ -4,8 +4,11 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-django = "*"
-djangorestframework = "*"
+django = "*"                                # Core web framework for building the application
+djangorestframework = "*"                   # REST API toolkit for Django, provides serializers, viewsets, etc.
+djangorestframework-simplejwt = "*"         # JWT authentication for DRF APIs
+django-filter = "*"                         # Advanced filtering for DRF API queries
+drf-spectacular = "*"                       # Automatic OpenAPI schema and documentation generation for DRF
 
 [dev-packages]
 
