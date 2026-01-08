@@ -146,3 +146,11 @@ REST_FRAMEWORK = {
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+
+
+# Custom error handlers
+handler400 = 'apps.core.views.custom_400_view'
+handler403 = 'apps.core.views.custom_403_view'
+handler404 = 'apps.core.views.custom_404_view'
+handler500 = 'apps.core.views.custom_500_view'

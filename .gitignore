@@ -1,3 +1,9 @@
 node_modules
 db.sqlite3
 .env
+
+# Python cache files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd

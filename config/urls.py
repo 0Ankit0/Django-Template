@@ -18,6 +18,9 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers,urls
 from apps.user_management import views
+from apps.core import views as core_views
+from django.conf import settings
+from django.conf.urls.static import static
 
 router = routers.DefaultRouter()
 router.register(r'users', views.UserViewSet)
@@ -27,4 +30,12 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
     path('api-auth/', include(urls, namespace='rest_framework')),
+    # Test URLs for error pages
+    path('test-400/', core_views.custom_400_view, name='test-400'),
+    path('test-403/', core_views.custom_403_view, name='test-403'),
+    path('test-404/', core_views.custom_404_view, name='test-404'),
+    path('test-500/', core_views.custom_500_view, name='test-500'),
 ]
+
+if settings.DEBUG:
+    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
