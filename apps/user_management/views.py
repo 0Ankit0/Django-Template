@@ -20,3 +20,8 @@ class GroupViewSet(viewsets.ModelViewSet):
     queryset = Group.objects.all().order_by('name')
     serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+
+def get_test_view(request):
+    from django.http import JsonResponse
+    return JsonResponse({'message': 'This is a test view'})
