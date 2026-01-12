@@ -22,14 +22,9 @@ from apps.core import views as core_views
 from django.conf import settings
 from django.conf.urls.static import static
 
-router = routers.DefaultRouter()
-router.register(r'users', views.UserViewSet)
-router.register(r'groups', views.GroupViewSet)
-
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', include(router.urls)),
-    path('api-auth/', include(urls, namespace='rest_framework')),
+    path('auth/', include('apps.user_management.api.urls')),
     # Test URLs for error pages
     path('test-400/', core_views.custom_400_view, name='test-400'),
     path('test-403/', core_views.custom_403_view, name='test-403'),
