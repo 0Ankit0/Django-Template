@@ -14,6 +14,7 @@ from pathlib import Path
 import os
 import importlib
 
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -118,7 +119,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Add custom user model as the default user model
-AUTH_USER_MODEL = 'user_management.User'
+AUTH_USER_MODEL = 'iam.User'
 # OR if you have imported the model
 # from apps.user_management.models import User
 # AUTH_USER_MODEL = User

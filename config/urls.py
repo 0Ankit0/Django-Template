@@ -17,14 +17,14 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers,urls
-from apps.user_management import views
+from iam import views
 from apps.core import views as core_views
 from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('auth/', include('apps.user_management.api.urls')),
+    path('auth/', include('iam.api.urls')),
     # Test URLs for error pages
     path('test-400/', core_views.custom_400_view, name='test-400'),
     path('test-403/', core_views.custom_403_view, name='test-403'),
