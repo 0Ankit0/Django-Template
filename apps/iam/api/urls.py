@@ -1,4 +1,4 @@
-from apps.iam.api.views import UserViewSet, GroupViewSet
+from iam.api.views import UserViewSet, GroupViewSet
 from rest_framework import routers
 from django.urls import path, include
 
