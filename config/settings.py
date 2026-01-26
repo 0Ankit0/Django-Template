@@ -48,6 +48,7 @@ for app_name in os.listdir(APPS_DIR):
 
 INSTALLED_APPS = [
     *discovered_apps,
+    'tailwind',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -149,6 +150,7 @@ REST_FRAMEWORK = {
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
+TAILWIND_APP_NAME = 'theme'
 
 # Custom error handlers
 handler400 = 'apps.core.views.custom_400_view'

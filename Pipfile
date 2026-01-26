@@ -9,6 +9,7 @@ djangorestframework = "*"                   # REST API toolkit for Django, provi
 djangorestframework-simplejwt = "*"         # JWT authentication for DRF APIs
 django-filter = "*"                         # Advanced filtering for DRF API queries
 drf-spectacular = "*"                       # Automatic OpenAPI schema and documentation generation for DRF
+django-tailwind = "*"                       # Integration of Tailwind CSS with Django
 
 [dev-packages]
 

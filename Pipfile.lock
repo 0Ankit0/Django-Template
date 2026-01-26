@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "11bc2b8832125db4b77b3df3e21a0aa708f28439c80d176ff5ab007b9b3c5597"
+            "sha256": "ba298d093ab84efadeeefd84415c5acaeb19f82c01d725c353d6190ecaf44348"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -49,6 +49,15 @@
             "index": "pypi",
             "markers": "python_version >= '3.10'",
             "version": "==25.2"
+        },
+        "django-tailwind": {
+            "hashes": [
+                "sha256:0e4a2836cb36e8952700457d049fadb8743583017cef80fa3a374f8597c289f4",
+                "sha256:b3a3eb2d22cbb8c17565898fb68ccedcf806542b04fe4107bdfec7035d582819"
+            ],
+            "index": "pypi",
+            "markers": "python_version >= '3.11'",
+            "version": "==4.4.2"
         },
         "djangorestframework": {
             "hashes": [
@@ -108,6 +117,14 @@
             ],
             "markers": "python_version >= '3.9'",
             "version": "==2.10.1"
+        },
+        "pytailwindcss": {
+            "hashes": [
+                "sha256:1f71dd64020aacb40608dfe8725ca441c772016c344f757ccbc74b8b6143027d",
+                "sha256:a9b770ad3c0a0f40073052bcfe81a060b550fed38af614a472f5aa7bb85fa8aa"
+            ],
+            "markers": "python_version >= '3.11' and python_version < '4.0'",
+            "version": "==0.3.0"
         },
         "pyyaml": {
             "hashes": [

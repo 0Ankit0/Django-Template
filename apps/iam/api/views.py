@@ -1,22 +1,31 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, serializers
 from django.contrib.auth import get_user_model
 from iam.models import Group
-from ..serializers import UserSerializer, GroupSerializer
+from ..serializers import (
+    CreateUserSerializer, UpdateUserSerializer, ListUserSerializer,
+    CreateGroupSerializer, UpdateGroupSerializer, ListGroupSerializer
+)
 
 User = get_user_model()
 
 class UserViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows users to be viewed or edited.
-    """
     queryset = User.objects.all().order_by('-date_joined')
-    serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_serializer_class(self) -> type[serializers.Serializer]: # type: ignore[return]
+        if self.action == 'create':
+            return CreateUserSerializer
+        elif self.action in ['update', 'partial_update']:
+            return UpdateUserSerializer
+        return ListUserSerializer
+
 class GroupViewSet(viewsets.ModelViewSet):
-    """
-    API endpoint that allows groups to be viewed or edited.
-    """
     queryset = Group.objects.all().order_by('name')
-    serializer_class = GroupSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self) -> type[serializers.Serializer]: # type: ignore[return]
+        if self.action == 'create':
+            return CreateGroupSerializer
+        elif self.action in ['update', 'partial_update']:
+            return UpdateGroupSerializer
+        return ListGroupSerializer
