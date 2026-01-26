@@ -2,14 +2,10 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 from .permissions import Permission
 from core.models import BaseModel
+from django.contrib.auth.models import Group as BaseGroupModel
 
-class Group(BaseModel):
-    name = models.CharField(_('name'), max_length=150, unique=True)
-    permissions = models.ManyToManyField(
-        Permission,
-        verbose_name=_('permissions'),
-        blank=True,
-    )
+class Group(BaseGroupModel,BaseModel):
+    pass
 
     class Meta:
         app_label = 'iam'
