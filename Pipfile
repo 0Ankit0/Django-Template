@@ -17,6 +17,12 @@ django-storages = "*"                       # Storage backends for Django, inclu
 boto3 = "*"                                 # AWS SDK for Python, used with django-storages for S3
 channels = "*"                              # Django Channels for handling WebSockets and asynchronous tasks    
 setuptools = "*"                            # Package development and distribution utilities
+celery = "*"                                # Distributed task queue for running background tasks
+django-celery-results = "*"                 # Results backend for Celery
+django-celery-beat = "*"                    # Beat scheduler for Celery
+inflection = "*"                            # Utility library for converting between singular and plural forms of words
+sentry-sdk = "*"                            # Sentry SDK for error tracking
+drf-access-policy = "*"                     # Access policy for DRF APIs
 
 [dev-packages]
 

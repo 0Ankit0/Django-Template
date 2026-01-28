@@ -20,3 +20,10 @@ def custom_exception_handler(exc, context):
         response.data = custom_response_data
 
     return response
+
+def get_client_ip(request):
+    """Retrieve client ip from x-forwarded-for header in case of load balancer usage"""
+    if x_forwarded_for := request.META.get("x-forwarded-for"):
+        return x_forwarded_for.split(",")[0]
+
+    return request.META["REMOTE_ADDR"]
