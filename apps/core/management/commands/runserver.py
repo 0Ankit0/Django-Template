@@ -8,7 +8,7 @@ class Command(RunserverCommand):
         if not os.environ.get('RUN_MAIN') or options.get('use_reloader') is False:
              self.stdout.write(self.style.SUCCESS('Building Tailwind CSS...'))
              try:
-                 call_command('tailwind', 'build')
+                 call_command('npm', 'run', 'build-css-prod')
              except Exception as e:
                  self.stdout.write(self.style.WARNING(f'Failed to build Tailwind CSS: {e}'))
         super().handle(*args, **options)

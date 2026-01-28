@@ -10,6 +10,13 @@ djangorestframework-simplejwt = "*"         # JWT authentication for DRF APIs
 django-filter = "*"                         # Advanced filtering for DRF API queries
 drf-spectacular = "*"                       # Automatic OpenAPI schema and documentation generation for DRF
 django-tailwind = "*"                       # Integration of Tailwind CSS with Django
+django-hashid-field = "*"                   # Hashids for Django models
+django-environ = "*"                        # Environment variables management for Django
+pillow = "*"                                # Image processing library for handling image uploads    
+django-storages = "*"                       # Storage backends for Django, including S3 support
+boto3 = "*"                                 # AWS SDK for Python, used with django-storages for S3
+channels = "*"                              # Django Channels for handling WebSockets and asynchronous tasks    
+setuptools = "*"                            # Package development and distribution utilities
 
 [dev-packages]
 

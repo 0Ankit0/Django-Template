@@ -13,22 +13,30 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 from pathlib import Path
 import os
 import importlib
+import environ
+import datetime
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 
+env = environ.Env(
+    DJANGO_DEBUG=(bool, False),
+)
+
+ENVIRONMENT_NAME = env("ENVIRONMENT_NAME", default="")
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-i_#59i68krga6udcwk+hp=apa-@2#90^2r8twn5xkz7i6&kvze'
+SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env("DJANGO_DEBUG")
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[])
 
 
 # Application definition
@@ -139,10 +147,83 @@ USE_TZ = True
 
 # Django REST Framework settings
 REST_FRAMEWORK = {
+    "EXCEPTION_HANDLER": "apps.core.utils.custom_exception_handler",
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_AUTHENTICATION_CLASSES": (
+        "apps.iam.authentication.JSONWebTokenCookieAuthentication",
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
+    ),
+    "DEFAULT_THROTTLE_RATES": {"anon": "100/day"},
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 10,
 }
 
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": datetime.timedelta(minutes=env.int("ACCESS_TOKEN_LIFETIME_MINUTES", default=5)),
+    "REFRESH_TOKEN_LIFETIME": datetime.timedelta(days=env.int("REFRESH_TOKEN_LIFETIME_DAYS", default=7)),
+    "AUTH_TOKEN_CLASSES": ("rest_framework_simplejwt.tokens.AccessToken",),
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+}
+ACCESS_TOKEN_COOKIE = "token"
+REFRESH_TOKEN_COOKIE = "refresh_token"
+REFRESH_TOKEN_LOGOUT_COOKIE = "refresh_token_logout"
+COOKIE_MAX_AGE = 3600 * 24 * 14  # 14 days
+
+
+SOCIAL_AUTH_USER_MODEL = "iam.User"
+SOCIAL_AUTH_USER_FIELDS = ["email", "username"]
+# SOCIAL_AUTH_STRATEGY = "apps.iam.strategy.DjangoJWTStrategy"  # Uncomment when social auth is needed
+SOCIAL_AUTH_JSONFIELD_ENABLED = True
+SOCIAL_AUTH_REDIRECT_IS_HTTPS = env.bool("SOCIAL_AUTH_REDIRECT_IS_HTTPS", default=True)
+SOCIAL_AUTH_PIPELINE = (
+    "social_core.pipeline.social_auth.social_details",
+    "social_core.pipeline.social_auth.social_uid",
+    "social_core.pipeline.social_auth.social_user",
+    "social_core.pipeline.user.get_username",
+    "social_core.pipeline.social_auth.associate_by_email",
+    "social_core.pipeline.user.create_user",
+    "social_core.pipeline.social_auth.associate_user",
+    "social_core.pipeline.social_auth.load_extra_data",
+    # "apps.multitenancy.pipeline.create_default_tenant",  # Uncomment when multitenancy is added
+    "social_core.pipeline.user.user_details",
+)
+SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS = env.list("SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS", default=[])
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY", default="")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = env("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET", default="")
+SOCIAL_AUTH_FACEBOOK_KEY = env("SOCIAL_AUTH_FACEBOOK_KEY", default="")
+SOCIAL_AUTH_FACEBOOK_SECRET = env("SOCIAL_AUTH_FACEBOOK_SECRET", default="")
+SOCIAL_AUTH_FACEBOOK_SCOPE = ["email", "public_profile"]
+SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
+    "fields": "id, name, email",
+}
+SOCIAL_AUTH_LOGIN_ERROR_URL = "/"
+SOCIAL_AUTH_FIELDS_STORED_IN_SESSION = ["locale"]
+
+SWAGGER_SETTINGS = {
+    "DEFAULT_INFO": "config.urls_api.api_info",
+    "SECURITY_DEFINITIONS": {"api_key": {"type": "apiKey", "in": "header", "name": "Authorization"}},
+}
+
+HASHID_FIELD_SALT = env("HASHID_FIELD_SALT")
+
+EMAIL_BACKEND = env("EMAIL_BACKEND", default="django_ses.SESBackend")
+EMAIL_HOST = env("EMAIL_HOST", default=None)
+EMAIL_PORT = env("EMAIL_PORT", default=None)
+EMAIL_HOST_USER = env("EMAIL_HOST_USER", default=None)
+EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD", default=None)
+EMAIL_FROM_ADDRESS = env("EMAIL_FROM_ADDRESS", default=None)
+EMAIL_REPLY_ADDRESS = env.list("EMAIL_REPLY_ADDRESS", default=(EMAIL_FROM_ADDRESS,))
+
+DEFAULT_USER_GROUP = env("DEFAULT_USER_GROUP", default="User")
+
+if DEBUG:
+    DEFAULT_FILE_STORAGE = "django.core.files.storage.FileSystemStorage"
+    MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+    MEDIA_URL = "/media/"
+else:
+    DEFAULT_FILE_STORAGE = "core.storage.PublicS3Boto3StorageWithCDN"
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/

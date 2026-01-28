@@ -9,7 +9,7 @@ from ..serializers import (
 User = get_user_model()
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all().order_by('-date_joined')
+    queryset = User.objects.all().order_by('-created')
     permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self) -> type[serializers.Serializer]: # type: ignore[return]

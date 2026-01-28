@@ -1,4 +1,5 @@
 import uuid
+import hashid_field
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -32,7 +33,7 @@ class BaseManager(models.Manager.from_queryset(BaseQuerySet)):
         return super().get_queryset().filter(is_active=True)
 
 class BaseModel(models.Model):
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    id = hashid_field.HashidAutoField(primary_key=True)
     
     created_at = models.DateTimeField(auto_now_add=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='created_%(class)s_set', null=True, blank=True)
@@ -73,4 +74,7 @@ class BaseModel(models.Model):
 
     class Meta:
         abstract = True
+
+
+
         
