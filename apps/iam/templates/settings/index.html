@@ -1,6 +1,6 @@
 {% extends "base/dashboard_base.html" %}
 
-{% block title %}Settings - E-Commerce{% endblock %}
+{% block title %}Settings - Django Template{% endblock %}
 {% block page_title %}Settings{% endblock %}
 
 {% block content %}
@@ -13,16 +13,60 @@
                 Profile
             </h2>
             
-            <form method="post" action="{% url 'iam:settings_profile' %}" class="space-y-4">
+            <form method="post" class="space-y-4" enctype="multipart/form-data">
                 {% csrf_token %}
+                <input type="hidden" name="form_type" value="profile">
                 
+                {% if profile_form.non_field_errors %}
+                <div class="alert alert-error mb-4">
+                    <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                    <span>{{ profile_form.non_field_errors|join:", " }}</span>
+                </div>
+                {% endif %}
+
                 <div class="flex items-center gap-4 mb-6">
                     <div class="avatar placeholder">
-                        <div class="bg-primary text-primary-content rounded-full w-16">
-                            <span class="text-2xl">{{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}</span>
+                        <div class="bg-primary text-primary-content rounded-full w-16 overflow-hidden">
+                            {% if user.profile.avatar %}
+                            <img id="avatar-preview" src="{{ user.profile.avatar.original.url }}" alt="Profile Avatar" class="w-full h-full object-cover" />
+                            {% else %}
+                            <div id="avatar-placeholder" class="w-full h-full flex items-center justify-center">
+                                <span class="text-2xl">{{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}</span>
+                            </div>
+                            <img id="avatar-preview" src="" alt="Profile Avatar" class="w-full h-full object-cover hidden" />
+                            {% endif %}
                         </div>
                     </div>
-                    <button type="button" class="btn btn-ghost btn-sm">Change Avatar</button>
+                    
+                    <div class="hidden">
+                        {{ profile_form.avatar }}
+                    </div>
+                    {% if profile_form.avatar.errors %}
+                        <div class="text-error text-sm mt-1">{{ profile_form.avatar.errors|join:", " }}</div>
+                    {% endif %}
+                    
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="document.getElementById('{{ profile_form.avatar.id_for_label }}').click()">
+                        Change Avatar
+                    </button>
+                    
+                    <script>
+                        document.getElementById('{{ profile_form.avatar.id_for_label }}').addEventListener('change', function(e) {
+                            if (e.target.files && e.target.files[0]) {
+                                var reader = new FileReader();
+                                reader.onload = function(e) {
+                                    var preview = document.getElementById('avatar-preview');
+                                    var placeholder = document.getElementById('avatar-placeholder');
+                                    
+                                    preview.src = e.target.result;
+                                    preview.classList.remove('hidden');
+                                    if (placeholder) {
+                                        placeholder.classList.add('hidden');
+                                    }
+                                }
+                                reader.readAsDataURL(e.target.files[0]);
+                            }
+                        });
+                    </script>
                 </div>
                 
                 <div class="grid grid-cols-2 gap-4">
@@ -31,12 +75,18 @@
                             <span class="label-text">First Name</span>
                         </label>
                         {{ profile_form.first_name }}
+                        {% if profile_form.first_name.errors %}
+                            <div class="text-error text-sm mt-1">{{ profile_form.first_name.errors|join:", " }}</div>
+                        {% endif %}
                     </div>
                     <div class="form-control">
                         <label class="label">
                             <span class="label-text">Last Name</span>
                         </label>
                         {{ profile_form.last_name }}
+                        {% if profile_form.last_name.errors %}
+                            <div class="text-error text-sm mt-1">{{ profile_form.last_name.errors|join:", " }}</div>
+                        {% endif %}
                     </div>
                 </div>
                 
@@ -45,6 +95,9 @@
                         <span class="label-text">Email</span>
                     </label>
                     {{ profile_form.email }}
+                    {% if profile_form.email.errors %}
+                        <div class="text-error text-sm mt-1">{{ profile_form.email.errors|join:", " }}</div>
+                    {% endif %}
                 </div>
                 
                 <button type="submit" class="btn btn-primary">Save Changes</button>
@@ -60,14 +113,25 @@
                 Change Password
             </h2>
             
-            <form method="post" action="{% url 'iam:settings_password' %}" class="space-y-4">
+            <form method="post" class="space-y-4">
                 {% csrf_token %}
+                <input type="hidden" name="form_type" value="password">
+                
+                {% if password_form.non_field_errors %}
+                <div class="alert alert-error mb-4">
+                    <i data-lucide="alert-circle" class="w-5 h-5"></i>
+                    <span>{{ password_form.non_field_errors|join:", " }}</span>
+                </div>
+                {% endif %}
                 
                 <div class="form-control">
                     <label class="label">
                         <span class="label-text">Current Password</span>
                     </label>
                     {{ password_form.old_password }}
+                    {% if password_form.old_password.errors %}
+                        <div class="text-error text-sm mt-1">{{ password_form.old_password.errors|join:", " }}</div>
+                    {% endif %}
                 </div>
                 
                 <div class="form-control">
@@ -75,6 +139,9 @@
                         <span class="label-text">New Password</span>
                     </label>
                     {{ password_form.new_password1 }}
+                    {% if password_form.new_password1.errors %}
+                        <div class="text-error text-sm mt-1">{{ password_form.new_password1.errors|join:", " }}</div>
+                    {% endif %}
                 </div>
                 
                 <div class="form-control">
@@ -82,6 +149,9 @@
                         <span class="label-text">Confirm New Password</span>
                     </label>
                     {{ password_form.new_password2 }}
+                    {% if password_form.new_password2.errors %}
+                        <div class="text-error text-sm mt-1">{{ password_form.new_password2.errors|join:", " }}</div>
+                    {% endif %}
                 </div>
                 
                 <button type="submit" class="btn btn-primary">Update Password</button>

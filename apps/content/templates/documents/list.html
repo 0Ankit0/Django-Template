@@ -1,10 +1,10 @@
-{% extends 'base.html' %}
+{% extends 'base/dashboard_base.html' %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-8">
   <div class="flex justify-between items-center mb-6">
     <h1 class="text-3xl font-bold">My Documents</h1>
-    <a href="{% url 'content:document_upload' %}" class="btn btn-primary">Upload Document</a>
+    <a href="{% url 'content:documents_upload' %}" class="btn btn-primary">Upload Document</a>
   </div>
 
   <div class="grid grid-cols-1 md:grid-cols-3 gap-6">

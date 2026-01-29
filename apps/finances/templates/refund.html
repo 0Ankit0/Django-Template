@@ -3,7 +3,7 @@
 <div class="modal">
     <h1>Refund {{ payment_intent.id }}</h1>
 
-    <form action="{% url 'payment-intent-refund' pk=payment_intent.pk %}" method="POST">
+    <form action="{% url 'finances_api:payment-intent-refund' pk=payment_intent.pk %}" method="POST">
         {% render_form serializer %}
 
         <br/>

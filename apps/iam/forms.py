@@ -102,10 +102,31 @@ class ProfileForm(TailwindFormMixin, forms.ModelForm):
     
     def save(self, commit=True):
         profile = super().save(commit=False)
+        
+        # Update email on user model
         if self.user and 'email' in self.cleaned_data:
             self.user.email = self.cleaned_data['email']
             if commit:
                 self.user.save()
+                
+        # Handle Avatar
+        avatar_file = self.cleaned_data.get('avatar')
+        if avatar_file:
+            from iam.models import UserAvatar
+            
+            # If profile already has an avatar, update it? Or create new one?
+            # Start simple: Create new avatar instance (old one eventually GC'd or we delete it)
+            # Better: if exists, update it.
+            if profile.avatar:
+                profile.avatar.original = avatar_file
+                if commit:
+                    profile.avatar.save()
+            else:
+                user_avatar = UserAvatar(original=avatar_file)
+                if commit:
+                    user_avatar.save()
+                profile.avatar = user_avatar
+
         if commit:
             profile.save()
         return profile

@@ -67,7 +67,7 @@ def send_scheduled_notifications():
 def broadcast_notification(notification_type: str, data: dict = None, tenant_id: str = None):
     """Broadcast a notification to all users or all users in a tenant."""
     from multitenancy.models import TenantMembership
-    from users.models import User
+    from iam.models import User
 
     if tenant_id:
         user_ids = TenantMembership.objects.filter(tenant_id=tenant_id, is_active=True).values_list(

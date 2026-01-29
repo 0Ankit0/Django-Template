@@ -1,0 +1,49 @@
+{% extends "base/dashboard_base.html" %}
+
+{% block title %}Products - Django Template{% endblock %}
+{% block page_title %}Products{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Products</h1>
+    <a href="{% url 'content:products_create' %}" class="btn btn-primary">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        New Product
+    </a>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for product in products %}
+    <div class="card bg-base-100 shadow-sm">
+        {% if product.fields.image %}
+        <figure class="px-4 pt-4">
+            <img src="{{ product.fields.image }}" alt="{{ product.fields.title }}" class="rounded-xl h-48 w-full object-cover" />
+        </figure>
+        {% endif %}
+        <div class="card-body">
+            <h2 class="card-title justify-between">
+                {{ product.fields.title }}
+                <div class="badge badge-secondary">${{ product.fields.price }}</div>
+            </h2>
+            <p class="text-base-content/70">{{ product.fields.description|truncatechars:100 }}</p>
+            <div class="card-actions justify-end mt-4">
+                <button class="btn btn-primary btn-sm">Buy Now</button>
+            </div>
+        </div>
+    </div>
+    {% empty %}
+    <div class="col-span-full">
+        <div class="card bg-base-100 shadow-sm border-2 border-dashed border-base-300">
+            <div class="card-body text-center py-12">
+                <i data-lucide="shopping-bag" class="w-12 h-12 mx-auto text-base-content/30 mb-4"></i>
+                <h3 class="font-semibold mb-2">No products yet</h3>
+                <p class="text-base-content/60 mb-4">Create your first product to get started</p>
+                <a href="{% url 'content:products_create' %}" class="btn btn-primary">
+                    Create Product
+                </a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

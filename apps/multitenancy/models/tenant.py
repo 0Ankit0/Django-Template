@@ -72,7 +72,8 @@ class Tenant(BaseModel):
                     super().save(*args, **kwargs)
                     break
             except IntegrityError as e:
-                if "duplicate key" in str(e).lower():
+                error_msg = str(e).lower()
+                if "duplicate key" in error_msg or "unique constraint" in error_msg:
                     counter += 1
                 else:
                     raise e

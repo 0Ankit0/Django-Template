@@ -1,6 +1,6 @@
 {% extends "base/dashboard_base.html" %}
 
-{% block title %}Documents - E-Commerce{% endblock %}
+{% block title %}Documents - Django Template{% endblock %}
 {% block page_title %}Documents{% endblock %}
 
 {% block content %}
@@ -47,9 +47,9 @@
         <h3 class="font-bold text-lg mb-4">Upload Document</h3>
         
         <form method="post" 
-              action="{% url 'frontend:document_upload' %}" 
+              action="{% url 'content:documents_upload' %}" 
               enctype="multipart/form-data"
-              hx-post="{% url 'frontend:document_upload' %}"
+              hx-post="{% url 'content:documents_upload' %}"
               hx-target="#document-list tbody"
               hx-swap="afterbegin"
               class="space-y-4">

@@ -27,12 +27,14 @@ urlpatterns = [
     
     # App URLs
     path('', include('core.urls')),
-    path('', include('iam.urls')),
-    path('', include('multitenancy.urls')),
-    path('', include('finances.urls')),
-    path('', include('notifications.urls')),
-    path('', include('content.urls')),
-    path('', include('integrations.urls')),
+    path('iam/', include('iam.urls')),
+    path('multitenancy/', include('multitenancy.urls')),
+    path('finances/', include('finances.urls')),
+    path('notifications/', include('notifications.urls')),
+    path('content/', include('content.urls')),
+    path('integrations/', include('integrations.urls')),
+    # API URLs
+    path('api/', include('config.urls_api')),
 
     # Test URLs for error pages
     path('test-400/', core_views.custom_400_view, name='test-400'),

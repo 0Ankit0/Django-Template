@@ -6,9 +6,9 @@ from drf_yasg.views import get_schema_view
 from rest_framework import permissions
 
 api_info = openapi.Info(
-    title="E-Commerce Backend API",
+    title="Django Template Backend API",
     default_version="v1",
-    description="REST API for E-Commerce Backend with Auth, Payments, Subscriptions, Multi-tenancy, CMS & OpenAI"
+    description="REST API for Django Template Backend with Auth, Payments, Subscriptions, Multi-tenancy, CMS & OpenAI"
 )
 
 
@@ -31,30 +31,27 @@ urlpatterns = [
     re_path(r"^doc/", schema_view.with_ui("swagger"), name='schema-swagger-ui'),
     re_path(r"^redoc/", schema_view.with_ui("redoc"), name='schema-redoc'),
     
-    # Frontend views (Django templates)
-    path("", include("frontend.urls")),
-    
     path(
-        "api/",
+        "",
         include(
             [
                 # Authentication & User Management (single include to avoid namespace conflicts)
-                path("", include("users.urls")),
+                path("", include("iam.api.urls")),
 
                 # Multi-tenancy
-                path("tenants/", include("multitenancy.urls")),
+                path("tenants/", include("multitenancy.api.urls")),
 
                 # Notifications
-                path("", include("notifications.urls")),
+                path("", include("notifications.api.urls")),
 
                 # Finances & Subscriptions
-                path("finances/", include("finances.urls")),
+                path("finances/", include("finances.api.urls")),
 
                 # Content Management (Contentful CMS)
-                path("content/", include("content.urls")),
+                path("content/", include("content.api.urls")),
 
                 # Integrations (OpenAI)
-                path("integrations/", include("integrations.urls")),
+                path("integrations/", include("integrations.api.urls")),
             ]
         ),
     ),

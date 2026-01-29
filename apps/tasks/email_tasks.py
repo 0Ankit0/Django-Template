@@ -36,13 +36,13 @@ def send_email_task(to_email: str, subject: str, template_name: str, context: di
 @shared_task
 def send_welcome_email(user_id: int):
     """Send welcome email to new user."""
-    from users.models import User
+    from iam.models import User
 
     try:
         user = User.objects.get(id=user_id)
         send_email_task.delay(
             to_email=user.email,
-            subject="Welcome to E-Commerce Platform",
+            subject="Welcome to Django Template Platform",
             template_name="welcome",
             context={"user": {"email": user.email, "first_name": user.first_name}},
         )
@@ -55,7 +55,7 @@ def send_welcome_email(user_id: int):
 @shared_task
 def send_password_reset_email(user_id: int, reset_token: str):
     """Send password reset email."""
-    from users.models import User
+    from iam.models import User
 
     try:
         user = User.objects.get(id=user_id)

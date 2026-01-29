@@ -1,75 +1,11 @@
-from rest_framework import status, viewsets
 from django.contrib import messages
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import get_object_or_404, redirect, render
-
 from django.urls import reverse, reverse_lazy
 from django.views.generic import FormView, ListView, TemplateView
-from . import forms
 
-from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
-
-from . import models, serializers
-from .services import membership as membership_service
-
-
-class TenantViewSet(viewsets.ModelViewSet):
-    serializer_class = serializers.TenantSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return models.Tenant.objects.filter(membership__user=self.request.user).distinct()
-
-    def perform_create(self, serializer):
-        tenant = serializer.save(created_by=self.request.user)
-        models.TenantMembership.objects.create(
-            tenant=tenant, user=self.request.user, role=models.TenantUserRole.OWNER, invitee=self.request.user
-        )
-
-
-class TenantMembershipViewSet(viewsets.ModelViewSet):
-    serializer_class = serializers.TenantMembershipSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        tenant_id = self.request.query_params.get("tenant_id")
-        if tenant_id:
-            return models.TenantMembership.objects.filter(
-                tenant_id=tenant_id, tenant__membership__user=self.request.user
-            )
-        return models.TenantMembership.objects.filter(tenant__membership__user=self.request.user)
-
-    @action(detail=True, methods=["delete"])
-    def remove(self, request, pk=None):
-        membership = self.get_object()
-        membership_service.delete_tenant_membership(membership, self.request.user)
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-
-class TenantInvitationViewSet(viewsets.ModelViewSet):
-    serializer_class = serializers.TenantInvitationSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        return models.TenantInvitation.objects.filter(
-            invitee=self.request.user
-        ) | models.TenantInvitation.objects.filter(created_by=self.request.user)
-
-    @action(detail=True, methods=["post"])
-    def accept(self, request, pk=None):
-        invitation = self.get_object()
-        result = membership_service.accept_invitation(invitation, request.user)
-        return Response(result, status=status.HTTP_200_OK)
-
-    @action(detail=True, methods=["post"])
-    def decline(self, request, pk=None):
-        invitation = self.get_object()
-        result = membership_service.decline_invitation(invitation, request.user)
-        return Response(result, status=status.HTTP_200_OK)
-
+from . import forms, models, constants
 
 class TenantListView(LoginRequiredMixin, ListView):
     """List user's tenants."""
@@ -98,7 +34,8 @@ class TenantCreateView(LoginRequiredMixin, FormView):
         models.TenantMembership.objects.create(
             user=self.request.user,
             tenant=tenant,
-            role=models.TenantUserRole.OWNER # Using enum from model if available, else string
+            role=constants.TenantUserRole.OWNER,
+            is_accepted=True
         )
         messages.success(self.request, f'Organization "{tenant.name}" created successfully!')
         return super().form_valid(form)
@@ -161,9 +98,9 @@ class TenantInviteView(LoginRequiredMixin, FormView):
 
 
 @login_required
-def switch_tenant(request, tenant_id):
-    tenant = get_object_or_404(models.Tenant, id=tenant_id)
-    if not tenant.members.filter(user=request.user).exists():
+def switch_tenant(request, pk):
+    tenant = get_object_or_404(models.Tenant, id=pk)
+    if not tenant.members.filter(id=request.user.id).exists():
         messages.error(request, 'You are not a member of this tenant.')
         return redirect('core:dashboard')
     

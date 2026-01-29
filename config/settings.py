@@ -15,6 +15,7 @@ import os
 import importlib
 import environ
 import datetime
+import sys
 from . import monitoring
 
 
@@ -58,6 +59,7 @@ DJANGO_CORE_APPS = [
 
 THIRD_PARTY_APPS = [
     "django_extensions",
+    "django_browser_reload",
     "tailwind",
     "django_celery_results",
     "django_celery_beat",
@@ -74,6 +76,7 @@ THIRD_PARTY_APPS = [
 # Auto Discover apps in the project
 LOCAL_APPS = []
 APPS_DIR = os.path.join(BASE_DIR, 'apps')
+sys.path.append(APPS_DIR) # Ensure apps directory is in the path
 for app_name in os.listdir(APPS_DIR):
     app_path = os.path.join(APPS_DIR, app_name)
     if os.path.isdir(app_path) and os.path.isfile(os.path.join(app_path, '__init__.py')):
@@ -245,6 +248,12 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+AUTHENTICATION_BACKENDS = (
+    "social_core.backends.google.GoogleOAuth2",
+    "social_core.backends.facebook.FacebookOAuth2",
+    "django.contrib.auth.backends.ModelBackend",
+)
+
 # Add custom user model as the default user model
 AUTH_USER_MODEL = 'iam.User'
 # OR if you have imported the model
@@ -261,6 +270,11 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 
 USE_TZ = True
+
+# Auth URLs
+LOGIN_URL = "iam:login"
+LOGIN_REDIRECT_URL = "core:dashboard"
+LOGOUT_REDIRECT_URL = "iam:login"
 
 
 # Django REST Framework settings
@@ -318,6 +332,7 @@ SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
 }
 SOCIAL_AUTH_LOGIN_ERROR_URL = "/"
 SOCIAL_AUTH_FIELDS_STORED_IN_SESSION = ["locale"]
+SOCIAL_AUTH_URL_NAMESPACE = 'iam_api:social'
 
 SWAGGER_SETTINGS = {
     "DEFAULT_INFO": "config.urls_api.api_info",
@@ -395,13 +410,17 @@ if IS_LOCAL_DEBUG:
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
     CELERY_BROKER_URL = 'memory://'
+    # Print emails to console for local development
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 else:
     CELERY_BROKER_URL = f'{env("REDIS_CONNECTION")}/0'
+    EMAIL_BACKEND = env("EMAIL_BACKEND", default="django_ses.SESBackend")
+
 CELERY_BROKER_TRANSPORT_OPTIONS = {
     'visibility_timeout': 3600,
 }
 
-EMAIL_BACKEND = env("EMAIL_BACKEND", default="django_ses.SESBackend")
+
 EMAIL_HOST = env("EMAIL_HOST", default=None)
 EMAIL_PORT = env("EMAIL_PORT", default=None)
 EMAIL_HOST_USER = env("EMAIL_HOST_USER", default=None)
@@ -430,10 +449,6 @@ handler403 = 'core.views.custom_403_view'
 handler404 = 'core.views.custom_404_view'
 handler500 = 'core.views.custom_500_view'
 
-
-
-
-
 AWS_SES_REGION_NAME = env("AWS_SES_REGION_NAME", default=AWS_REGION)
 
 # If you want to use the SESv2 client
@@ -446,5 +461,5 @@ INTERNAL_IPS = [
 ]
 
 # NPM executable path (for django-tailwind)
-NPM_BIN_PATH = env("NPM_BIN_PATH", default="npm")
+NPM_BIN_PATH = env("NPM_BIN_PATH", default="/usr/local/bin/npm")
 

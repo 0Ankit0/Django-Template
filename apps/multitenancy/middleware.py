@@ -52,8 +52,8 @@ class TenantMiddleware:
         self.get_response = get_response
 
     def __call__(self, request):
-        # Extract tenant ID from header or query params
-        tenant_id = request.headers.get("X-Tenant-ID") or request.GET.get("tenant_id")
+        # Extract tenant ID from header, query params, or session
+        tenant_id = request.headers.get("X-Tenant-ID") or request.GET.get("tenant_id") or request.session.get("tenant_id")
 
         if tenant_id:
             request.tenant = SimpleLazyObject(lambda: get_current_tenant(tenant_id))

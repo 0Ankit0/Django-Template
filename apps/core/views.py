@@ -48,7 +48,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         
         # Get unread notification count
         context['unread_count'] = notification_models.Notification.objects.filter(
-            user=user, is_read=False
+            user=user, read_at__isnull=True
         ).count()
         
         # Get user's tenants

@@ -1,6 +1,6 @@
 {% extends "base/dashboard_base.html" %}
 
-{% block title %}Finances - E-Commerce{% endblock %}
+{% block title %}Finances - Django Template{% endblock %}
 {% block page_title %}Finances{% endblock %}
 
 {% block content %}
@@ -14,7 +14,7 @@
                 <p class="text-base-content/60">Basic features for getting started</p>
             </div>
             <div class="mt-4 md:mt-0">
-                <a href="{% url 'frontend:subscription' %}" class="btn btn-primary">
+                <a href="{% url 'finances:subscription' %}" class="btn btn-primary">
                     <i data-lucide="sparkles" class="w-4 h-4"></i>
                     Upgrade Plan
                 </a>
@@ -29,13 +29,13 @@
         <div class="card-body">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="card-title">Payment Methods</h3>
-                <a href="{% url 'frontend:payment_methods' %}" class="btn btn-ghost btn-sm">Manage</a>
+                <a href="{% url 'finances:payment_methods' %}" class="btn btn-ghost btn-sm">Manage</a>
             </div>
             
             <div class="text-center py-8">
                 <i data-lucide="credit-card" class="w-12 h-12 mx-auto text-base-content/30 mb-4"></i>
                 <p class="text-base-content/60">No payment methods added</p>
-                <a href="{% url 'frontend:payment_methods' %}" class="btn btn-primary btn-sm mt-4">
+                <a href="{% url 'finances:payment_methods' %}" class="btn btn-primary btn-sm mt-4">
                     Add Payment Method
                 </a>
             </div>

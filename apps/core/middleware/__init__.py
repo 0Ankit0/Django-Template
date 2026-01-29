@@ -1,6 +1,6 @@
-from .health_check_middleware import HealthCheckMiddleware
-from .manage_cookies_middleware import ManageCookiesMiddleware
-from .set_auth_token_cookie_middleware import SetAuthTokenCookieMiddleware
+from .health_check import HealthCheckMiddleware
+from .manage_cookies import ManageCookiesMiddleware
+from .set_auth_token_cookie import SetAuthTokenCookieMiddleware
 
 __all__ = [
     "HealthCheckMiddleware",

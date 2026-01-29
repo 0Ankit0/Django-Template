@@ -62,6 +62,14 @@ class SignupView(FormView):
         user = form.save(commit=False)
         user.username = form.cleaned_data['email']
         user.save()
+        
+        # Create or update profile with additional data
+        from iam.models import UserProfile
+        profile, created = UserProfile.objects.get_or_create(user=user)
+        profile.first_name = form.cleaned_data.get('first_name', '')
+        profile.last_name = form.cleaned_data.get('last_name', '')
+        profile.save()
+        
         messages.success(self.request, 'Account created successfully! Please log in.')
         return super().form_valid(form)
 
@@ -98,7 +106,7 @@ class OTPVerifyView(FormView):
         otp_code = form.cleaned_data.get('otp_code')
         
         try:
-            from iam.services import otp # Changed from apps.users.services
+            from iam.services import otp # Changed from apps.iam.services
 
             otp.validate_otp(user, otp_code)
             
@@ -119,13 +127,39 @@ class PasswordResetView(FormView):
     success_url = reverse_lazy('iam:password_reset_done')
     
     def form_valid(self, form):
-        form.save(request=self.request)
+        form.save(
+            request=self.request,
+            email_template_name='auth/password_reset_email.html'
+        )
         return super().form_valid(form)
 
 
 class PasswordResetDoneView(TemplateView):
     """Password reset email sent confirmation."""
     template_name = 'auth/password_reset_done.html'
+
+
+class PasswordResetConfirmView(LoginRequiredMixin, FormView):
+    """
+    Since we are using standard Django forms for this or need to handle the token link:
+    Actually, Django's auth views are best for this complex token validation logic.
+    Let's subclass Django's built-in views to keep it simple but use our templates.
+    """
+    pass
+
+# Wait, mixing custom FormViews with Django's complex Reset views is tricky.
+# The easiest path is to import Django's views directly in urls.py OR subclass them here.
+# Let's subclass to set template_name.
+
+from django.contrib.auth import views as auth_views
+
+class CustomPasswordResetConfirmView(auth_views.PasswordResetConfirmView):
+    template_name = 'auth/password_reset_confirm.html'
+    success_url = reverse_lazy('iam:password_reset_complete')
+    form_class = forms.CustomSetPasswordForm
+
+class CustomPasswordResetCompleteView(auth_views.PasswordResetCompleteView):
+    template_name = 'auth/password_reset_complete.html'
 
 
 class OTPEnableView(LoginRequiredMixin, FormView):
@@ -180,45 +214,48 @@ class SettingsView(LoginRequiredMixin, TemplateView):
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['profile_form'] = forms.ProfileForm(instance=self.request.user)
-        context['password_form'] = forms.CustomPasswordChangeForm(user=self.request.user)
+        # Pass user explicitly and profile as instance
+        profile = getattr(self.request.user, 'profile', None)
+        if 'profile_form' not in context:
+            context['profile_form'] = forms.ProfileForm(
+                user=self.request.user, 
+                instance=profile
+            )
+        if 'password_form' not in context:
+            context['password_form'] = forms.CustomPasswordChangeForm(user=self.request.user)
         return context
 
+    def post(self, request, *args, **kwargs):
+        form_type = request.POST.get('form_type')
+        user = request.user
+        profile = getattr(user, 'profile', None)
+        
+        # Default forms (unbound)
+        profile_form = forms.ProfileForm(user=user, instance=profile)
+        password_form = forms.CustomPasswordChangeForm(user=user)
+        
+        if form_type == 'profile':
+            profile_form = forms.ProfileForm(request.POST, request.FILES, user=user, instance=profile)
+            if profile_form.is_valid():
+                profile_form.save()
+                messages.success(request, 'Profile updated successfully!')
+                return redirect('iam:settings')
+        
+        elif form_type == 'password':
+            password_form = forms.CustomPasswordChangeForm(user=user, data=request.POST)
+            if password_form.is_valid():
+                password_form.save()
+                # Update session hash to prevent logout
+                from django.contrib.auth import update_session_auth_hash
+                update_session_auth_hash(request, password_form.user)
+                messages.success(request, 'Password changed successfully!')
+                return redirect('iam:settings')
 
-class ProfileUpdateView(LoginRequiredMixin, FormView):
-    """Update user profile."""
-    template_name = 'settings/profile.html'
-    form_class = forms.ProfileForm
-    success_url = reverse_lazy('iam:settings')
-    login_url = reverse_lazy('iam:login')
-    
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['instance'] = self.request.user
-        return kwargs
-    
-    def form_valid(self, form):
-        form.save()
-        messages.success(self.request, 'Profile updated successfully!')
-        return super().form_valid(form)
-
-
-class PasswordChangeView(LoginRequiredMixin, FormView):
-    """Change password view."""
-    template_name = 'settings/password.html'
-    form_class = forms.CustomPasswordChangeForm
-    success_url = reverse_lazy('iam:settings')
-    login_url = reverse_lazy('iam:login')
-    
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-    
-    def form_valid(self, form):
-        form.save()
-        messages.success(self.request, 'Password changed successfully!')
-        return super().form_valid(form)
+        # Render with errors
+        context = self.get_context_data(**kwargs)
+        context['profile_form'] = profile_form
+        context['password_form'] = password_form
+        return self.render_to_response(context)
 
 
 class SecuritySettingsView(LoginRequiredMixin, TemplateView):

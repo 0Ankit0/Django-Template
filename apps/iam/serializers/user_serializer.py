@@ -401,7 +401,7 @@ class UpdateUserSerializer(serializers.ModelSerializer):
 
 
 class ListUserSerializer(serializers.ModelSerializer):
-    """Serializer for listing users."""
+    """Serializer for listing iam."""
     profile = serializers.SerializerMethodField()
 
     class Meta:

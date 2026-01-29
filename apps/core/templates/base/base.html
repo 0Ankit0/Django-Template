@@ -4,8 +4,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="E-Commerce Platform">
-    <title>{% block title %}E-Commerce{% endblock %}</title>
+    <meta name="description" content="Django Template Platform">
+    <title>{% block title %}Django Template{% endblock %}</title>
     
     <!-- Tailwind CSS -->
     {% tailwind_css %}
@@ -22,7 +22,27 @@
     {% block extra_head %}{% endblock %}
 </head>
 <body class="h-full bg-base-200" x-data="{ sidebarOpen: false, notificationsOpen: false }">
-    {% block body %}{% endblock %}
+    {% block body %}
+    <div class="navbar bg-base-100 shadow-sm">
+      <div class="flex-1">
+        <a class="btn btn-ghost text-xl" href="/">Django Template</a>
+      </div>
+      <div class="flex-none">
+        <ul class="menu menu-horizontal px-1">
+          {% if user.is_authenticated %}
+            <li><a href="{% url 'core:dashboard' %}">Dashboard</a></li>
+            <li><a href="{% url 'iam:logout' %}">Logout</a></li>
+          {% else %}
+            <li><a href="{% url 'iam:login' %}">Login</a></li>
+            <li><a href="{% url 'iam:signup' %}">Sign up</a></li>
+          {% endif %}
+        </ul>
+      </div>
+    </div>
+    
+    {% block content %}
+    {% endblock %}
+    {% endblock %}
     
     <!-- Initialize Lucide Icons -->
     <script>lucide.createIcons();</script>

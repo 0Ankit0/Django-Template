@@ -1,6 +1,6 @@
 {% extends "base/dashboard_base.html" %}
 
-{% block title %}Notifications - E-Commerce{% endblock %}
+{% block title %}Notifications - Django Template{% endblock %}
 {% block page_title %}Notifications{% endblock %}
 
 {% block content %}
@@ -8,7 +8,7 @@
     <div class="card-body">
         <div class="flex justify-between items-center mb-6">
             <h2 class="card-title">All Notifications</h2>
-            <button hx-post="{% url 'frontend:notifications_read_all' %}" 
+            <button hx-post="{% url 'notifications:mark_all_read' %}" 
                     hx-swap="none"
                     class="btn btn-ghost btn-sm">
                 Mark all as read

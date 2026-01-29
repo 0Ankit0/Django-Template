@@ -1,6 +1,6 @@
 {% extends "base/dashboard_base.html" %}
 
-{% block title %}Security Settings - E-Commerce{% endblock %}
+{% block title %}Security Settings - Django Template{% endblock %}
 {% block page_title %}Security Settings{% endblock %}
 
 {% block content %}
@@ -19,7 +19,7 @@
                 <span>Two-factor authentication is enabled</span>
             </div>
             
-            <form method="post" action="{% url 'frontend:otp_disable' %}">
+            <form method="post" action="{% url 'iam:otp_disable' %}">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-error btn-outline" onclick="return confirm('Are you sure you want to disable 2FA?')">Disable 2FA</button>
             </form>
@@ -38,7 +38,7 @@
                     <div class="step">Verify Code</div>
                 </div>
                 
-                <a href="{% url 'frontend:otp_enable' %}" class="btn btn-primary">
+                <a href="{% url 'iam:otp_setup' %}" class="btn btn-primary">
                     <i data-lucide="shield" class="w-4 h-4"></i>
                     Enable 2FA
                 </a>

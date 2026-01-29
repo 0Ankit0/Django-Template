@@ -7,7 +7,7 @@
     {% with original.get_stripe_dashboard_url as stripe_url %}
         {% if stripe_url %}
             <li>
-                <a href="{% url 'payment-intent-refund' pk=original.pk %}" rel="refund-modal:open"
+                <a href="{% url 'finances_api:payment-intent-refund' pk=original.pk %}" rel="refund-modal:open"
                    class="djstripe-payment-refund-cta">{% trans "Refund" %}
                 </a>
             </li>

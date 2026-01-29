@@ -7,7 +7,7 @@
     {% with original.get_stripe_dashboard_url as stripe_url %}
         {% if original.status == 'succeeded' and original.amount_refunded < original.amount %}
             <li>
-                <a href="{% url 'payment-intent-refund' pk=original.payment_intent.pk %}" rel="refund-modal:open"
+                <a href="{% url 'finances_api:payment-intent-refund' pk=original.payment_intent.pk %}" rel="refund-modal:open"
                    class="djstripe-payment-refund-cta">
                     {% trans "Refund" %}
                 </a>
