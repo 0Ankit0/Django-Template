@@ -41,7 +41,7 @@ class TenantMembership(BaseModel):
     is_accepted = models.BooleanField(default=False)
     invitation_accepted_at = models.DateTimeField(null=True)
     invitee_email_address = models.EmailField(
-        db_collation="case_insensitive",
+        # db_collation="case_insensitive",
         verbose_name="invitee email address",
         max_length=255,
         default="",

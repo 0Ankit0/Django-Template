@@ -46,7 +46,7 @@ class Tenant(BaseModel):
         through_fields=("tenant", "user"),
     )
     billing_email = models.EmailField(
-        db_collation="case_insensitive",
+        # db_collation="case_insensitive",
         verbose_name="billing email address",
         max_length=255,
         unique=False,
