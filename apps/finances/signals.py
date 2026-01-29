@@ -3,7 +3,7 @@ import logging
 from django.conf import settings
 from django.db.models.signals import post_save
 from django.dispatch import receiver
-from stripe.error import AuthenticationError
+import stripe
 
 from multitenancy.models import Tenant
 
@@ -20,7 +20,7 @@ def create_free_plan_subscription(sender, instance, created, **kwargs):
     if created:
         try:
             subscriptions.initialize_tenant(tenant=instance)
-        except AuthenticationError as e:
+        except stripe.AuthenticationError as e:
             logger.error(msg=e._message, exc_info=e)
             return
         except Exception as e:

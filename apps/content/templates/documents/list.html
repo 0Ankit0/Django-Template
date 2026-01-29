@@ -1,0 +1,30 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <div class="flex justify-between items-center mb-6">
+    <h1 class="text-3xl font-bold">My Documents</h1>
+    <a href="{% url 'content:document_upload' %}" class="btn btn-primary">Upload Document</a>
+  </div>
+
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    {% for document in documents %}
+      <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+          <h2 class="card-title">{{ document.file.name }}</h2>
+          <p class="text-sm text-gray-500">Uploaded on {{ document.created_at|date }}</p>
+          <div class="card-actions justify-end">
+            <a href="{{ document.file.url }}" class="btn btn-sm btn-ghost" target="_blank">View</a>
+            <form method="post" action="{% url 'content:document_delete' document.pk %}">
+              {% csrf_token %}
+              <button type="submit" class="btn btn-sm btn-error">Delete</button>
+            </form>
+          </div>
+        </div>
+      </div>
+    {% empty %}
+      <p>No documents found.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}

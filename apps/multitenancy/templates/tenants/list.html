@@ -6,7 +6,7 @@
 {% block content %}
 <div class="flex justify-between items-center mb-6">
     <h1 class="text-2xl font-bold">Your Organizations</h1>
-    <a href="{% url 'frontend:tenant_create' %}" class="btn btn-primary">
+    <a href="{% url 'multitenancy:create' %}" class="btn btn-primary">
         <i data-lucide="plus" class="w-4 h-4"></i>
         New Organization
     </a>
@@ -29,11 +29,11 @@
             </div>
             
             <div class="card-actions justify-end">
-                <a href="{% url 'frontend:tenant_detail' membership.tenant.id %}" class="btn btn-ghost btn-sm">
+                <a href="{% url 'multitenancy:detail' membership.tenant.id %}" class="btn btn-ghost btn-sm">
                     <i data-lucide="settings" class="w-4 h-4"></i>
                     Manage
                 </a>
-                <a href="{% url 'frontend:tenant_switch' membership.tenant.id %}" class="btn btn-primary btn-sm">
+                <a href="{% url 'multitenancy:switch' membership.tenant.id %}" class="btn btn-primary btn-sm">
                     <i data-lucide="log-in" class="w-4 h-4"></i>
                     Switch
                 </a>
@@ -47,7 +47,7 @@
                 <i data-lucide="building-2" class="w-12 h-12 mx-auto text-base-content/30 mb-4"></i>
                 <h3 class="font-semibold mb-2">No organizations yet</h3>
                 <p class="text-base-content/60 mb-4">Create your first organization to get started</p>
-                <a href="{% url 'frontend:tenant_create' %}" class="btn btn-primary">
+                <a href="{% url 'multitenancy:create' %}" class="btn btn-primary">
                     <i data-lucide="plus" class="w-4 h-4"></i>
                     Create Organization
                 </a>

@@ -18,3 +18,10 @@ urlpatterns = [
     path("stripe/", include(stripe_urls)),
     path("", include(router.urls)),
 ]
+
+urlpatterns += [
+    path('finances/', views.FinancesView.as_view(), name='index'),
+    path('finances/payment-methods/', views.PaymentMethodsView.as_view(), name='payment_methods'),
+    path('finances/subscription/', views.SubscriptionView.as_view(), name='subscription'),
+]
+

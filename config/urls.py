@@ -24,13 +24,23 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('auth/', include('iam.api.urls')),
+    
+    # App URLs
+    path('', include('core.urls')),
+    path('', include('iam.urls')),
+    path('', include('multitenancy.urls')),
+    path('', include('finances.urls')),
+    path('', include('notifications.urls')),
+    path('', include('content.urls')),
+    path('', include('integrations.urls')),
+
     # Test URLs for error pages
     path('test-400/', core_views.custom_400_view, name='test-400'),
     path('test-403/', core_views.custom_403_view, name='test-403'),
     path('test-404/', core_views.custom_404_view, name='test-404'),
     path('test-500/', core_views.custom_500_view, name='test-500'),
 ]
+
 
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

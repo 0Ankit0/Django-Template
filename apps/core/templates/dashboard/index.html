@@ -1,0 +1,41 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+  <h1 class="text-3xl font-bold mb-6">Dashboard</h1>
+  
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Notifications Card -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title">Notifications</h2>
+        <p>You have {{ unread_count }} unread notifications.</p>
+        <div class="card-actions justify-end">
+          <a href="{% url 'notifications:list' %}" class="btn btn-primary btn-sm">View All</a>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tenants Card -->
+    <div class="card bg-base-100 shadow-xl">
+      <div class="card-body">
+        <h2 class="card-title">Organizations</h2>
+        <ul class="menu bg-base-100 w-full p-2 rounded-box">
+          {% for membership in tenants %}
+          <li>
+            <a href="{% url 'multitenancy:switch' membership.tenant.id %}" class="{% if request.session.active_tenant_id == membership.tenant.id %}active{% endif %}">
+              {{ membership.tenant.name }}
+            </a>
+          </li>
+          {% empty %}
+          <li><a>No organizations found</a></li>
+          {% endfor %}
+        </ul>
+        <div class="card-actions justify-end">
+          <a href="{% url 'multitenancy:create' %}" class="btn btn-secondary btn-sm">Create New</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

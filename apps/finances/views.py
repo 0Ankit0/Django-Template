@@ -1,5 +1,10 @@
 from djstripe import models as djstripe_models
 from rest_framework import status, viewsets
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.urls import reverse_lazy
+from django.views.generic import TemplateView
+from . import models as finance_models # Adjusting import to match frontend usage if needed
+
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
@@ -72,3 +77,32 @@ class SubscriptionScheduleViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response({"message": "Subscription cancelled"}, status=status.HTTP_200_OK)
+
+
+class FinancesView(LoginRequiredMixin, TemplateView):
+    """Finances overview."""
+    template_name = 'finances/index.html'
+    login_url = reverse_lazy('iam:login')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get available plans
+        context['plans'] = djstripe_models.Product.objects.filter(
+            active=True
+        ).prefetch_related('prices')
+        
+        return context
+
+
+class PaymentMethodsView(LoginRequiredMixin, TemplateView):
+    """Manage payment methods."""
+    template_name = 'finances/payment_methods.html'
+    login_url = reverse_lazy('iam:login')
+
+
+class SubscriptionView(LoginRequiredMixin, TemplateView):
+    """Subscription management."""
+    template_name = 'finances/subscription.html'
+    login_url = reverse_lazy('iam:login')
+

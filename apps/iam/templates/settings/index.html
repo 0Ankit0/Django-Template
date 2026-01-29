@@ -13,7 +13,7 @@
                 Profile
             </h2>
             
-            <form method="post" action="{% url 'frontend:settings_profile' %}" class="space-y-4">
+            <form method="post" action="{% url 'iam:settings_profile' %}" class="space-y-4">
                 {% csrf_token %}
                 
                 <div class="flex items-center gap-4 mb-6">
@@ -60,7 +60,7 @@
                 Change Password
             </h2>
             
-            <form method="post" action="{% url 'frontend:settings_password' %}" class="space-y-4">
+            <form method="post" action="{% url 'iam:settings_password' %}" class="space-y-4">
                 {% csrf_token %}
                 
                 <div class="form-control">
@@ -102,7 +102,7 @@
                     <p class="font-semibold">Two-Factor Authentication</p>
                     <p class="text-sm text-base-content/60">Add an extra layer of security to your account</p>
                 </div>
-                <a href="{% url 'frontend:settings_security' %}" class="btn btn-outline btn-sm">
+                <a href="{% url 'iam:settings_security' %}" class="btn btn-outline btn-sm">
                     <i data-lucide="settings" class="w-4 h-4"></i>
                     Configure
                 </a>

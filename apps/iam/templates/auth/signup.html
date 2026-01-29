@@ -1,11 +1,11 @@
-{% extends "base/auth_base.html" %}
+{% extends "base.html" %}
 
 {% block title %}Sign Up - E-Commerce{% endblock %}
 
 {% block auth_title %}Create your account{% endblock %}
 
 {% block auth_subtitle %}
-Already have an account? <a href="{% url 'frontend:login' %}" class="font-medium text-primary hover:text-primary-focus">Sign in</a>
+Already have an account? <a href="{% url 'iam:login' %}" class="font-medium text-primary hover:text-primary-focus">Sign in</a>
 {% endblock %}
 
 {% block auth_content %}

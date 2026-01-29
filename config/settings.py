@@ -15,6 +15,8 @@ import os
 import importlib
 import environ
 import datetime
+from . import monitoring
+
 
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -25,7 +27,13 @@ env = environ.Env(
     DJANGO_DEBUG=(bool, False),
 )
 
+ASGI_APPLICATION = "config.asgi.application"
+
 ENVIRONMENT_NAME = env("ENVIRONMENT_NAME", default="")
+
+SENTRY_DSN = env("SENTRY_DSN", default=None)
+SENTRY_TRACES_SAMPLE_RATE = env("SENTRY_TRACES_SAMPLE_RATE", default=0.2)
+monitoring.init(SENTRY_DSN, ENVIRONMENT_NAME, SENTRY_TRACES_SAMPLE_RATE)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -35,7 +43,7 @@ SECRET_KEY = env("DJANGO_SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = env("DJANGO_DEBUG")
-
+IS_LOCAL_DEBUG = DEBUG and ENVIRONMENT_NAME == "local"
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[])
 
 
@@ -102,7 +110,10 @@ MIDDLEWARE = [
     "social_django.middleware.SocialAuthExceptionMiddleware",
 ]
 
-ROOT_URLCONF = 'config.urls'
+ROOT_URLCONF = "config.urls"
+ROOT_HOSTCONF = "config.hosts"
+DEFAULT_HOST = "api"
+PARENT_HOST = env('PARENT_HOST', default="")
 
 TEMPLATES = [
     {
@@ -118,19 +129,102 @@ TEMPLATES = [
         },
     },
 ]
+PASSWORD_HASHERS = env.list(
+    "DJANGO_PASSWORD_HASHERS",
+    default=[
+        'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+        'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+        'django.contrib.auth.hashers.Argon2PasswordHasher',
+        'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+    ],
+)
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': env('DJANGO_LOG_LEVEL', default='INFO'),
+    },
+    'loggers': {
+        '*': {
+            'handlers': ['console'],
+            'level': env('DJANGO_LOG_LEVEL', default='INFO'),
+            'propagate': False,
+        },
+    },
+}
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+
+if IS_LOCAL_DEBUG:
+    # Use SQLite for local development
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
+        }
     }
-}
+    
+    # Use in-memory channel layer for local development
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels.layers.InMemoryChannelLayer",
+        },
+    }
+    
+    # Use local memory cache for local development
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "unique-snowflake",
+        }
+    }
+    
+    REDIS_CONNECTION = None
+else:
+    # Use PostgreSQL for production
+    DB_CONNECTION = json.loads(env("DB_CONNECTION"))
+    DB_PROXY_ENDPOINT = env("DB_PROXY_ENDPOINT", default=None)
+
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": DB_CONNECTION["dbname"],
+            "USER": DB_CONNECTION["username"],
+            "PASSWORD": DB_CONNECTION["password"],
+            "HOST": DB_PROXY_ENDPOINT or DB_CONNECTION["host"],
+            "PORT": DB_CONNECTION["port"],
+        },
+    }
+
+    REDIS_CONNECTION = env("REDIS_CONNECTION")
+
+    CHANNEL_LAYERS = {
+        "default": {
+            "BACKEND": "channels_redis.core.RedisChannelLayer",
+            "CONFIG": {
+                "hosts": [REDIS_CONNECTION],
+            },
+        },
+    }
+
+    CACHES = {
+        "default": {
+            "BACKEND": "django_redis.cache.RedisCache",
+            "LOCATION": REDIS_CONNECTION,
+            "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
+        }
+    }
 
 
 # Password validation
@@ -232,6 +326,81 @@ SWAGGER_SETTINGS = {
 
 HASHID_FIELD_SALT = env("HASHID_FIELD_SALT")
 
+USER_NOTIFICATION_IMPL = "config.notifications.stdout"
+
+WORKERS_EVENT_BUS_NAME = env("WORKERS_EVENT_BUS_NAME", default=None)
+
+AWS_ENDPOINT_URL = env("AWS_ENDPOINT_URL", default=None)
+AWS_REGION = env("AWS_REGION", default=None)
+
+LAMBDA_TASKS_BASE_HANDLER = env("LAMBDA_TASKS_BASE_HANDLER", default="core.tasks.LambdaTask")
+LAMBDA_TASKS_LOCAL_URL = env("LAMBDA_TASKS_LOCAL_URL", default=None)
+
+STRIPE_LIVE_SECRET_KEY = env("STRIPE_LIVE_SECRET_KEY", default="sk_<CHANGE_ME>")
+STRIPE_TEST_SECRET_KEY = env("STRIPE_TEST_SECRET_KEY", default="sk_test_<CHANGE_ME>")
+STRIPE_LIVE_MODE = env.bool("STRIPE_LIVE_MODE", default=False)
+DJSTRIPE_WEBHOOK_SECRET = env("DJSTRIPE_WEBHOOK_SECRET", default="")
+DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"
+
+
+def tenant_request_callback(request):
+    return request.tenant
+
+
+DJSTRIPE_SUBSCRIBER_MODEL_REQUEST_CALLBACK = tenant_request_callback
+DJSTRIPE_SUBSCRIBER_MODEL = "multitenancy.Tenant"
+# Disable stripe checks for keys on django application start
+STRIPE_CHECKS_ENABLED = env.bool("STRIPE_CHECKS_ENABLED", default=True)
+if not STRIPE_CHECKS_ENABLED:
+    SILENCED_SYSTEM_CHECKS.extend(["djstripe.C001", "djstripe.I001", "djstripe.I002"])
+
+STRIPE_ENABLED = '<CHANGE_ME>' not in STRIPE_LIVE_SECRET_KEY or '<CHANGE_ME>' not in STRIPE_TEST_SECRET_KEY
+
+SUBSCRIPTION_TRIAL_PERIOD_DAYS = env("SUBSCRIPTION_TRIAL_PERIOD_DAYS", default=7)
+
+NOTIFICATIONS_STRATEGIES = ["InAppNotificationStrategy"]
+
+SHELL_PLUS_IMPORTS = []
+
+AWS_STORAGE_BUCKET_NAME = env("AWS_STORAGE_BUCKET_NAME", default=None)
+AWS_EXPORTS_STORAGE_BUCKET_NAME = env("AWS_EXPORTS_STORAGE_BUCKET_NAME", default=None)
+AWS_S3_ENDPOINT_URL = AWS_ENDPOINT_URL
+AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN", default=None)
+AWS_QUERYSTRING_EXPIRE = env("AWS_QUERYSTRING_EXPIRE", default=60 * 60 * 24)
+AWS_CLOUDFRONT_KEY = os.environ.get('AWS_CLOUDFRONT_KEY', '').encode('ascii')
+AWS_CLOUDFRONT_KEY_ID = os.environ.get('AWS_CLOUDFRONT_KEY_ID', None)
+USER_DATA_EXPORT_EXPIRY_SECONDS = env.int("USER_DATA_EXPORT_EXPIRY_SECONDS", 172800)  # 2 days default
+
+DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
+CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS", default=[])
+RATELIMIT_IP_META_KEY = "core.utils.get_client_ip"
+
+OTP_AUTH_ISSUER_NAME = env("OTP_AUTH_ISSUER_NAME", default="")
+OTP_AUTH_TOKEN_COOKIE = 'otp_auth_token'
+OTP_AUTH_TOKEN_LIFETIME_MINUTES = datetime.timedelta(minutes=env.int('OTP_AUTH_TOKEN_LIFETIME_MINUTES', default=5))
+OTP_VALIDATE_PATH = "/auth/validate-otp"
+
+OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
+
+UPLOADED_DOCUMENT_SIZE_LIMIT = env.int("UPLOADED_DOCUMENT_SIZE_LIMIT", default=10 * 1024 * 1024)
+USER_DOCUMENTS_NUMBER_LIMIT = env.int("USER_DOCUMENTS_NUMBER_LIMIT", default=10)
+
+TENANT_INVITATION_TIMEOUT = env("TENANT_INVITATION_TIMEOUT", default=60 * 60 * 24 * 14)
+
+# Celery Configuration
+CELERY_RESULT_BACKEND = 'django-db'
+if IS_LOCAL_DEBUG:
+    # Use synchronous task execution for local development (no broker needed)
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_EAGER_PROPAGATES = True
+    CELERY_BROKER_URL = 'memory://'
+else:
+    CELERY_BROKER_URL = f'{env("REDIS_CONNECTION")}/0'
+CELERY_BROKER_TRANSPORT_OPTIONS = {
+    'visibility_timeout': 3600,
+}
+
 EMAIL_BACKEND = env("EMAIL_BACKEND", default="django_ses.SESBackend")
 EMAIL_HOST = env("EMAIL_HOST", default=None)
 EMAIL_PORT = env("EMAIL_PORT", default=None)
@@ -255,10 +424,27 @@ else:
 STATIC_URL = 'static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 
-TAILWIND_APP_NAME = 'theme'
-
 # Custom error handlers
 handler400 = 'core.views.custom_400_view'
 handler403 = 'core.views.custom_403_view'
 handler404 = 'core.views.custom_404_view'
 handler500 = 'core.views.custom_500_view'
+
+
+
+
+
+AWS_SES_REGION_NAME = env("AWS_SES_REGION_NAME", default=AWS_REGION)
+
+# If you want to use the SESv2 client
+USE_SES_V2 = True
+
+# Django Tailwind Configuration
+TAILWIND_APP_NAME = 'theme'
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
+
+# NPM executable path (for django-tailwind)
+NPM_BIN_PATH = env("NPM_BIN_PATH", default="npm")
+

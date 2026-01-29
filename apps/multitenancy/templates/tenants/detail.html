@@ -29,7 +29,7 @@
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="card-title">Team Members</h3>
                     {% if membership.role in 'owner,admin' %}
-                    <a href="{% url 'frontend:tenant_invite' tenant.id %}" class="btn btn-primary btn-sm">
+                    <a href="{% url 'multitenancy:invite' tenant.id %}" class="btn btn-primary btn-sm">
                         <i data-lucide="user-plus" class="w-4 h-4"></i>
                         Invite
                     </a>
@@ -96,7 +96,7 @@
             <div class="card-body">
                 <h3 class="card-title mb-4">Actions</h3>
                 <div class="space-y-2">
-                    <a href="{% url 'frontend:tenant_switch' tenant.id %}" class="btn btn-primary btn-block">
+                    <a href="{% url 'multitenancy:switch' tenant.id %}" class="btn btn-primary btn-block">
                         <i data-lucide="log-in" class="w-4 h-4"></i>
                         Switch to this org
                     </a>

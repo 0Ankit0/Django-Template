@@ -1,11 +1,11 @@
-{% extends "base/auth_base.html" %}
+{% extends "base.html" %}
 
 {% block title %}Login - E-Commerce{% endblock %}
 
 {% block auth_title %}Sign in to your account{% endblock %}
 
 {% block auth_subtitle %}
-Or <a href="{% url 'frontend:signup' %}" class="font-medium text-primary hover:text-primary-focus">create a new account</a>
+Or <a href="{% url 'iam:signup' %}" class="font-medium text-primary hover:text-primary-focus">create a new account</a>
 {% endblock %}
 
 {% block auth_content %}
@@ -41,7 +41,7 @@ Or <a href="{% url 'frontend:signup' %}" class="font-medium text-primary hover:t
             {{ form.remember_me }}
             <span class="label-text">Remember me</span>
         </label>
-        <a href="{% url 'frontend:password_reset' %}" class="text-sm text-primary hover:text-primary-focus">Forgot password?</a>
+        <a href="{% url 'iam:password_reset' %}" class="text-sm text-primary hover:text-primary-focus">Forgot password?</a>
     </div>
     
     <button type="submit" class="btn btn-primary btn-block">Sign in</button>

@@ -12,7 +12,6 @@ from rest_framework_simplejwt.serializers import PasswordField
 from rest_framework_simplejwt.settings import api_settings as jwt_api_settings
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.multitenancy.models import Tenant
 from core.decorators import context_user_required
 
 from .. import jwt, models, notifications, tokens
@@ -24,7 +23,8 @@ UPLOADED_AVATAR_SIZE_LIMIT = 1 * 1024 * 1024
 
 
 class UserProfileSerializer(serializers.ModelSerializer):
-    id = rest.HashidSerializerCharField(source_field="users.User.id", source="user.id", read_only=True)
+    id = rest.HashidSerializerCharField(source_field="iam.User.id", source="user.id", read_only=True)
+
     email = serializers.CharField(source="user.email", read_only=True)
     roles = serializers.SerializerMethodField()
     avatar = serializers.FileField(required=False)
@@ -58,7 +58,8 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
 
 class UserSignupSerializer(serializers.ModelSerializer):
-    id = rest.HashidSerializerCharField(source_field="users.User.id", read_only=True)
+    id = rest.HashidSerializerCharField(source_field="iam.User.id", read_only=True)
+
     email = serializers.EmailField(
         validators=[validators.UniqueValidator(queryset=dj_auth.get_user_model().objects.all())],
     )
@@ -90,9 +91,11 @@ class UserSignupSerializer(serializers.ModelSerializer):
         ).send()
 
         # Create user signup tenant
+        from multitenancy.models import Tenant
         Tenant.objects.get_or_create_user_default_tenant(user)
 
         return {'id': user.id, 'email': user.email, 'access': str(refresh.access_token), 'refresh': str(refresh)}
+
 
 
 class UserAccountConfirmationSerializer(serializers.Serializer):
@@ -377,3 +380,34 @@ class DisableOTPSerializer(serializers.Serializer):
     def create(self, validated_data):
         otp_services.disable_otp(self.context_user)
         return {'ok': True}
+
+
+class CreateUserSerializer(serializers.ModelSerializer):
+    """Serializer for creating a new user."""
+    class Meta:
+        model = get_user_model()
+        fields = ('id', 'email', 'password')
+        extra_kwargs = {'password': {'write_only': True}}
+    
+    def create(self, validated_data):
+        return get_user_model().objects.create_user(**validated_data)
+
+
+class UpdateUserSerializer(serializers.ModelSerializer):
+    """Serializer for updating user details."""
+    class Meta:
+        model = get_user_model()
+        fields = ('first_name', 'last_name')
+
+
+class ListUserSerializer(serializers.ModelSerializer):
+    """Serializer for listing users."""
+    profile = serializers.SerializerMethodField()
+
+    class Meta:
+        model = get_user_model()
+        fields = ('id', 'email', 'is_active', 'profile')
+
+    def get_profile(self, obj):
+        return {'avatar': obj.profile.avatar.url if obj.profile and obj.profile.avatar else None}
+

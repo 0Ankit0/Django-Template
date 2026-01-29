@@ -7,32 +7,9 @@ from django.contrib.auth.forms import (
     SetPasswordForm,
     UserCreationForm,
 )
+from theme.forms import TailwindFormMixin
 
 User = get_user_model()
-
-
-class TailwindFormMixin:
-    """Mixin to add Tailwind/DaisyUI classes to form fields."""
-    
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        for field_name, field in self.fields.items():
-            css_class = 'input input-bordered w-full'
-            if field.widget.__class__.__name__ == 'CheckboxInput':
-                css_class = 'checkbox checkbox-primary'
-            elif field.widget.__class__.__name__ == 'Select':
-                css_class = 'select select-bordered w-full'
-            elif field.widget.__class__.__name__ == 'Textarea':
-                css_class = 'textarea textarea-bordered w-full'
-            elif field.widget.__class__.__name__ == 'FileInput':
-                css_class = 'file-input file-input-bordered w-full'
-            
-            existing_class = field.widget.attrs.get('class', '')
-            field.widget.attrs['class'] = f'{existing_class} {css_class}'.strip()
-            
-            if field.required:
-                field.widget.attrs['required'] = True
-
 
 class LoginForm(TailwindFormMixin, AuthenticationForm):
     """Custom login form with Tailwind styling."""
@@ -106,7 +83,8 @@ class ProfileForm(TailwindFormMixin, forms.ModelForm):
     )
     
     class Meta:
-        from apps.users.models import UserProfile
+        from iam.models import User, UserProfile
+
         model = UserProfile
         fields = ('first_name', 'last_name', 'avatar')
         widgets = {
@@ -133,33 +111,6 @@ class ProfileForm(TailwindFormMixin, forms.ModelForm):
         return profile
 
 
-class TenantForm(TailwindFormMixin, forms.Form):
-    """Form for creating/editing tenants."""
-    
-    name = forms.CharField(
-        max_length=100,
-        label='Organization Name',
-        widget=forms.TextInput(attrs={'placeholder': 'Enter organization name'})
-    )
-
-
-class TenantInvitationForm(TailwindFormMixin, forms.Form):
-    """Form for inviting members to a tenant."""
-    
-    email = forms.EmailField(
-        label='Email Address',
-        widget=forms.EmailInput(attrs={'placeholder': 'Enter email to invite'})
-    )
-    role = forms.ChoiceField(
-        choices=[
-            ('member', 'Member'),
-            ('admin', 'Admin'),
-        ],
-        label='Role',
-        initial='member'
-    )
-
-
 class OTPVerifyForm(TailwindFormMixin, forms.Form):
     """Form for OTP verification."""
     
@@ -173,19 +124,4 @@ class OTPVerifyForm(TailwindFormMixin, forms.Form):
             'inputmode': 'numeric',
             'autocomplete': 'one-time-code'
         })
-    )
-
-
-class DocumentUploadForm(TailwindFormMixin, forms.Form):
-    """Form for uploading documents."""
-    
-    file = forms.FileField(
-        label='Select File',
-        widget=forms.FileInput(attrs={'accept': '.pdf,.doc,.docx,.txt,.png,.jpg,.jpeg'})
-    )
-    description = forms.CharField(
-        max_length=255,
-        required=False,
-        label='Description',
-        widget=forms.Textarea(attrs={'placeholder': 'Optional description', 'rows': 3})
     )
