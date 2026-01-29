@@ -1,0 +1,78 @@
+{% extends "base/dashboard_base.html" %}
+
+{% block title %}Security Settings - E-Commerce{% endblock %}
+{% block page_title %}Security Settings{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <!-- 2FA Status -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title mb-4">
+                <i data-lucide="smartphone" class="w-5 h-5"></i>
+                Two-Factor Authentication
+            </h2>
+            
+            {% if otp_enabled %}
+            <div class="alert alert-success mb-4">
+                <i data-lucide="check-circle" class="w-5 h-5"></i>
+                <span>Two-factor authentication is enabled</span>
+            </div>
+            
+            <form method="post" action="{% url 'frontend:otp_disable' %}">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-error btn-outline" onclick="return confirm('Are you sure you want to disable 2FA?')">Disable 2FA</button>
+            </form>
+            {% else %}
+            <div class="alert alert-warning mb-4">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                <span>Two-factor authentication is not enabled</span>
+            </div>
+            
+            <div class="space-y-4">
+                <p class="text-base-content/70">Protect your account with an authenticator app like Google Authenticator or Authy.</p>
+                
+                <div class="steps steps-vertical lg:steps-horizontal">
+                    <div class="step step-primary">Install App</div>
+                    <div class="step">Scan QR Code</div>
+                    <div class="step">Verify Code</div>
+                </div>
+                
+                <a href="{% url 'frontend:otp_enable' %}" class="btn btn-primary">
+                    <i data-lucide="shield" class="w-4 h-4"></i>
+                    Enable 2FA
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Active Sessions -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title mb-4">
+                <i data-lucide="monitor" class="w-5 h-5"></i>
+                Active Sessions
+            </h2>
+            
+            <div class="space-y-3">
+                <div class="flex items-center justify-between p-3 bg-base-200 rounded-lg">
+                    <div class="flex items-center gap-3">
+                        <i data-lucide="monitor" class="w-5 h-5"></i>
+                        <div>
+                            <p class="font-medium">Current Session</p>
+                            <p class="text-sm text-base-content/60">{{ request.META.HTTP_USER_AGENT|truncatechars:50 }}</p>
+                        </div>
+                    </div>
+                    <span class="badge badge-success">Active</span>
+                </div>
+            </div>
+            
+            <button class="btn btn-error btn-outline mt-4">
+                <i data-lucide="log-out" class="w-4 h-4"></i>
+                Sign out all other sessions
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

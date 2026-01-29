@@ -1,0 +1,60 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Enable Two-Factor Authentication{% endblock %}
+
+{% block content %}
+<div class="max-w-md mx-auto mt-10">
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title justify-center">Enable 2FA</h2>
+            
+            <p class="text-gray-600 text-center mb-6">
+                Scan the QR code below with your authenticator app (like Google Authenticator or Authy).
+            </p>
+            
+            <!-- QR Code -->
+            <div class="flex justify-center mb-6">
+                <canvas id="qr-code"></canvas>
+            </div>
+            
+            <div class="text-center mb-6">
+                <p class="text-sm text-gray-500">Or enter this code manually:</p>
+                <code class="bg-gray-100 px-2 py-1 rounded">{{ secret_key }}</code>
+            </div>
+
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                
+                {% for field in form %}
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">{{ field.label }}</span>
+                    </label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <div class="text-error text-sm mt-1">{{ field.errors.0 }}</div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                
+                <div class="form-control mt-6">
+                    <button type="submit" class="btn btn-primary">Verify & Enable</button>
+                    <a href="{% url 'frontend:settings_security' %}" class="btn btn-ghost mt-2">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- QRious Library for QR Code generation -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrious/4.0.2/qrious.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        new QRious({
+            element: document.getElementById('qr-code'),
+            value: '{{ otp_auth_url }}',
+            size: 200
+        });
+    });
+</script>
+{% endblock %}

@@ -1,0 +1,82 @@
+{% extends "base/dashboard_base.html" %}
+
+{% block title %}Documents - E-Commerce{% endblock %}
+{% block page_title %}Documents{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Your Documents</h1>
+    <button class="btn btn-primary" onclick="document.getElementById('upload-modal').showModal()">
+        <i data-lucide="upload" class="w-4 h-4"></i>
+        Upload Document
+    </button>
+</div>
+
+<div class="card bg-base-100 shadow-sm">
+    <div class="card-body">
+        <div class="overflow-x-auto" id="document-list">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Size</th>
+                        <th>Uploaded</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for document in documents %}
+                    {% include "documents/partials/document_item.html" %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" class="text-center py-12">
+                            <i data-lucide="file-x" class="w-12 h-12 mx-auto text-base-content/30 mb-4"></i>
+                            <p class="text-base-content/60">No documents uploaded yet</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Upload Modal -->
+<dialog id="upload-modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg mb-4">Upload Document</h3>
+        
+        <form method="post" 
+              action="{% url 'frontend:document_upload' %}" 
+              enctype="multipart/form-data"
+              hx-post="{% url 'frontend:document_upload' %}"
+              hx-target="#document-list tbody"
+              hx-swap="afterbegin"
+              class="space-y-4">
+            {% csrf_token %}
+            
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Select File</span>
+                </label>
+                {{ upload_form.file }}
+            </div>
+            
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text">Description (optional)</span>
+                </label>
+                {{ upload_form.description }}
+            </div>
+            
+            <button type="submit" class="btn btn-primary btn-block">Upload</button>
+        </form>
+        
+        <div class="modal-action">
+            <form method="dialog">
+                <button class="btn btn-ghost">Cancel</button>
+            </form>
+        </div>
+    </div>
+</dialog>
+{% endblock %}

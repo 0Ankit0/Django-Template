@@ -1,0 +1,77 @@
+{% extends "base/dashboard_base.html" %}
+
+{% block title %}Subscription - E-Commerce{% endblock %}
+{% block page_title %}Manage Subscription{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Current Subscription -->
+    <div class="card bg-base-100 shadow-sm mb-6">
+        <div class="card-body">
+            <h2 class="card-title mb-4">Current Subscription</h2>
+            
+            <div class="flex items-center justify-between p-4 bg-base-200 rounded-lg">
+                <div>
+                    <p class="text-lg font-semibold">Free Plan</p>
+                    <p class="text-base-content/60">Basic features</p>
+                </div>
+                <span class="badge badge-success badge-lg">Active</span>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Change Plan -->
+    <h2 class="text-xl font-bold mb-4">Change Plan</h2>
+    
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="card bg-base-100 shadow-sm border-2 border-primary">
+            <div class="card-body">
+                <h3 class="card-title">Pro Monthly</h3>
+                <p class="text-3xl font-bold">$29<span class="text-sm font-normal text-base-content/60">/month</span></p>
+                <p class="text-base-content/60">Billed monthly</p>
+                <ul class="mt-4 space-y-2 text-sm">
+                    <li class="flex items-center gap-2">
+                        <i data-lucide="check" class="w-4 h-4 text-success"></i>
+                        5 Organizations
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <i data-lucide="check" class="w-4 h-4 text-success"></i>
+                        Unlimited Team Members
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <i data-lucide="check" class="w-4 h-4 text-success"></i>
+                        Priority Support
+                    </li>
+                </ul>
+                <div class="card-actions mt-6">
+                    <button class="btn btn-primary btn-block">Select Plan</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card bg-base-100 shadow-sm">
+            <div class="card-body">
+                <div class="flex justify-between items-center">
+                    <h3 class="card-title">Pro Yearly</h3>
+                    <span class="badge badge-success">Save 20%</span>
+                </div>
+                <p class="text-3xl font-bold">$278<span class="text-sm font-normal text-base-content/60">/year</span></p>
+                <p class="text-base-content/60">Billed annually ($23.17/month)</p>
+                <ul class="mt-4 space-y-2 text-sm">
+                    <li class="flex items-center gap-2">
+                        <i data-lucide="check" class="w-4 h-4 text-success"></i>
+                        Everything in Pro Monthly
+                    </li>
+                    <li class="flex items-center gap-2">
+                        <i data-lucide="check" class="w-4 h-4 text-success"></i>
+                        2 months free
+                    </li>
+                </ul>
+                <div class="card-actions mt-6">
+                    <button class="btn btn-outline btn-block">Select Plan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

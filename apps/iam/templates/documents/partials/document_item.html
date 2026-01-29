@@ -1,0 +1,28 @@
+<tr id="document-{{ document.id }}">
+    <td>
+        <div class="flex items-center gap-3">
+            <div class="bg-base-200 p-2 rounded">
+                <i data-lucide="file-text" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <p class="font-medium">{{ document.file.name|default:"Document" }}</p>
+            </div>
+        </div>
+    </td>
+    <td>{{ document.file.size|filesizeformat }}</td>
+    <td>{{ document.created_at|date:"M d, Y" }}</td>
+    <td>
+        <div class="flex gap-2">
+            <a href="{{ document.file.url }}" class="btn btn-ghost btn-sm" target="_blank">
+                <i data-lucide="download" class="w-4 h-4"></i>
+            </a>
+            <button hx-delete="{% url 'frontend:document_delete' document.id %}"
+                    hx-target="#document-{{ document.id }}"
+                    hx-swap="outerHTML"
+                    hx-confirm="Are you sure you want to delete this document?"
+                    class="btn btn-ghost btn-sm text-error">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+            </button>
+        </div>
+    </td>
+</tr>

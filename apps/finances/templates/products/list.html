@@ -1,0 +1,76 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}Products - E-Commerce Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">Products</h1>
+        <p class="text-gray-500">Browse our detailed product catalog</p>
+    </div>
+
+    <!-- Products Grid -->
+    {% if products %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {% for product in products %}
+        <div class="card bg-base-100 shadow-xl flex flex-col hover:scale-105 transition-transform duration-200">
+            {% if product.fields.image %}
+            <figure class="aspect-video relative overflow-hidden bg-gray-100">
+                <img src="{{ product.fields.image.url }}" alt="{{ product.fields.title }}" class="object-cover w-full h-full" />
+            </figure>
+            {% else %}
+            <figure class="aspect-video relative overflow-hidden bg-gray-100 flex items-center justify-center">
+                <span class="text-gray-400">No Image</span>
+            </figure>
+            {% endif %}
+            
+            <div class="card-body flex-1">
+                <h2 class="card-title text-base line-clamp-1">
+                    {{ product.fields.title }}
+                </h2>
+                <p class="text-sm text-gray-500 line-clamp-3">
+                    {{ product.fields.description }}
+                </p>
+                
+                <div class="mt-4 flex items-baseline gap-2">
+                    <span class="text-2xl font-bold text-gray-900">${{ product.fields.price }}</span>
+                    {% if product.fields.compare_at_price %}
+                    <span class="text-xs text-gray-500 line-through">${{ product.fields.compare_at_price }}</span>
+                    {% endif %}
+                </div>
+                
+                <div class="card-actions justify-end mt-4">
+                    <button class="btn btn-primary btn-block">Add to Cart</button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="join grid grid-cols-2 max-w-xs mx-auto mt-8">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" class="join-item btn btn-outline">Previous</a>
+        {% else %}
+        <button class="join-item btn btn-outline btn-disabled">Previous</button>
+        {% endif %}
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" class="join-item btn btn-outline">Next</a>
+        {% else %}
+        <button class="join-item btn btn-outline btn-disabled">Next</button>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% else %}
+    <div class="text-center py-12">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-gray-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+        </svg>
+        <p class="text-gray-500">No products found.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

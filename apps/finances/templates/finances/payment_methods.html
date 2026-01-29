@@ -1,0 +1,58 @@
+{% extends "base/dashboard_base.html" %}
+
+{% block title %}Payment Methods - E-Commerce{% endblock %}
+{% block page_title %}Payment Methods{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto">
+    <div class="card bg-base-100 shadow-sm mb-6">
+        <div class="card-body">
+            <h2 class="card-title mb-4">Your Payment Methods</h2>
+            
+            <div class="text-center py-8">
+                <i data-lucide="credit-card" class="w-12 h-12 mx-auto text-base-content/30 mb-4"></i>
+                <p class="text-base-content/60 mb-4">No payment methods added yet</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title mb-4">Add Payment Method</h2>
+            
+            <form class="space-y-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Card Number</span>
+                    </label>
+                    <input type="text" placeholder="4242 4242 4242 4242" class="input input-bordered w-full" />
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Expiry Date</span>
+                        </label>
+                        <input type="text" placeholder="MM/YY" class="input input-bordered w-full" />
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">CVC</span>
+                        </label>
+                        <input type="text" placeholder="123" class="input input-bordered w-full" />
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary btn-block">Add Card</button>
+            </form>
+            
+            <div class="divider">OR</div>
+            
+            <button class="btn btn-outline btn-block">
+                <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24"><path fill="currentColor" d="M20.067 8.478c.492.88.556 2.014.3 3.327-.74 3.806-3.276 5.12-6.514 5.12h-.5a.805.805 0 0 0-.794.68l-.04.22-.63 4.073-.024.13a.804.804 0 0 1-.794.68h-2.52c-.381 0-.698-.31-.65-.69l.77-4.92.03-.16c.042-.24.25-.41.49-.41h1.07c3.12 0 5.56-1.26 6.27-4.91.24-1.24.15-2.27-.33-2.99-.12-.18-.25-.34-.4-.48l.26.33z"/></svg>
+                Pay with PayPal
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}

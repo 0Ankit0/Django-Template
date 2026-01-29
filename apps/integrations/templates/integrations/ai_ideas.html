@@ -1,0 +1,79 @@
+{% extends 'dashboard/base.html' %}
+
+{% block title %}AI SaaS Ideas - E-Commerce Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <div>
+        <h1 class="text-2xl font-bold text-gray-900">AI SaaS Ideas Generator</h1>
+        <p class="text-gray-500">Generate innovative SaaS business ideas powered by AI</p>
+    </div>
+
+    <!-- Generator Form -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <h2 class="card-title flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                </svg>
+                Generate Ideas
+            </h2>
+            
+            <form method="post" class="mt-4 flex gap-4">
+                {% csrf_token %}
+                <div class="flex-1">
+                    <input 
+                        type="text" 
+                        name="keywords" 
+                        value="{{ keywords|default:'' }}"
+                        placeholder="Enter keywords separated by commas (e.g., healthcare, ai, remote work)" 
+                        class="input input-bordered w-full"
+                        required
+                    >
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clip-rule="evenodd" />
+                    </svg>
+                    Generate
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results -->
+    {% if ideas %}
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for idea in ideas %}
+        <div class="card bg-base-100 shadow-xl hover:shadow-2xl transition-all duration-200">
+            <div class="card-body">
+                <h3 class="card-title text-lg">{{ idea.name }}</h3>
+                <p class="text-sm text-gray-600">{{ idea.description }}</p>
+                
+                <div class="mt-4 space-y-3">
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase">Target Audience</p>
+                        <p class="text-sm">{{ idea.targetAudience }}</p>
+                    </div>
+                    
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase">Monetization</p>
+                        <p class="text-sm">{{ idea.monetization }}</p>
+                    </div>
+                    
+                    <div>
+                        <p class="text-xs font-bold text-gray-500 uppercase">Tech Stack</p>
+                        <div class="flex flex-wrap gap-1 mt-1">
+                            {% for tech in idea.techStack %}
+                            <span class="badge badge-outline badge-sm">{{ tech }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

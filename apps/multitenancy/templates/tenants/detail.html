@@ -1,0 +1,114 @@
+{% extends "base/dashboard_base.html" %}
+
+{% block title %}{{ tenant.name }} - E-Commerce{% endblock %}
+{% block page_title %}{{ tenant.name }}{% endblock %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <!-- Tenant Info -->
+    <div class="lg:col-span-2">
+        <div class="card bg-base-100 shadow-sm mb-6">
+            <div class="card-body">
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="avatar placeholder">
+                        <div class="bg-primary text-primary-content rounded-lg w-16">
+                            <span class="text-2xl">{{ tenant.name|slice:":1"|upper }}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <h2 class="text-2xl font-bold">{{ tenant.name }}</h2>
+                        <span class="badge badge-{{ membership.role }}">{{ membership.role|title }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Members -->
+        <div class="card bg-base-100 shadow-sm">
+            <div class="card-body">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="card-title">Team Members</h3>
+                    {% if membership.role in 'owner,admin' %}
+                    <a href="{% url 'frontend:tenant_invite' tenant.id %}" class="btn btn-primary btn-sm">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        Invite
+                    </a>
+                    {% endif %}
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Member</th>
+                                <th>Role</th>
+                                <th>Status</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for member in members %}
+                            <tr>
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <div class="avatar placeholder">
+                                            <div class="bg-neutral text-neutral-content rounded-full w-10">
+                                                <span>{% if member.user %}{{ member.user.first_name|slice:":1"|upper }}{{ member.user.last_name|slice:":1"|upper }}{% else %}?{% endif %}</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            {% if member.user %}
+                                            <div class="font-bold">{{ member.user.get_full_name|default:member.user.email }}</div>
+                                            <div class="text-sm opacity-50">{{ member.user.email }}</div>
+                                            {% else %}
+                                            <div class="font-bold">{{ member.invitee_email_address }}</div>
+                                            <div class="text-sm opacity-50">Pending invitation</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="badge">{{ member.role|title }}</span></td>
+                                <td>
+                                    {% if member.is_accepted %}
+                                    <span class="badge badge-success">Active</span>
+                                    {% else %}
+                                    <span class="badge badge-warning">Pending</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if membership.role == 'owner' and member.user != request.user %}
+                                    <button class="btn btn-ghost btn-xs text-error">Remove</button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar -->
+    <div class="space-y-6">
+        <!-- Quick Actions -->
+        <div class="card bg-base-100 shadow-sm">
+            <div class="card-body">
+                <h3 class="card-title mb-4">Actions</h3>
+                <div class="space-y-2">
+                    <a href="{% url 'frontend:tenant_switch' tenant.id %}" class="btn btn-primary btn-block">
+                        <i data-lucide="log-in" class="w-4 h-4"></i>
+                        Switch to this org
+                    </a>
+                    {% if membership.role == 'owner' %}
+                    <button class="btn btn-error btn-outline btn-block">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        Delete Organization
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

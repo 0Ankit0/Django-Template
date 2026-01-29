@@ -1,0 +1,44 @@
+{% extends "base/dashboard_base.html" %}
+
+{% block title %}Notifications - E-Commerce{% endblock %}
+{% block page_title %}Notifications{% endblock %}
+
+{% block content %}
+<div class="card bg-base-100 shadow-sm">
+    <div class="card-body">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="card-title">All Notifications</h2>
+            <button hx-post="{% url 'frontend:notifications_read_all' %}" 
+                    hx-swap="none"
+                    class="btn btn-ghost btn-sm">
+                Mark all as read
+            </button>
+        </div>
+        
+        <div class="space-y-3" id="notification-list">
+            {% for notification in notifications %}
+            {% include "notifications/partials/notification_item.html" %}
+            {% empty %}
+            <div class="text-center py-12">
+                <i data-lucide="bell-off" class="w-12 h-12 mx-auto text-base-content/30 mb-4"></i>
+                <p class="text-base-content/60">No notifications yet</p>
+            </div>
+            {% endfor %}
+        </div>
+        
+        {% if page_obj.has_other_pages %}
+        <div class="flex justify-center mt-6">
+            <div class="join">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" class="join-item btn">«</a>
+                {% endif %}
+                <button class="join-item btn">Page {{ page_obj.number }}</button>
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" class="join-item btn">»</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

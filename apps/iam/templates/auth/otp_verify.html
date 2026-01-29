@@ -1,0 +1,33 @@
+{% extends "base/auth_base.html" %}
+
+{% block title %}Verify OTP - E-Commerce{% endblock %}
+
+{% block auth_title %}Two-Factor Authentication{% endblock %}
+
+{% block auth_subtitle %}
+Enter the 6-digit code from your authenticator app
+{% endblock %}
+
+{% block auth_content %}
+<form method="post" class="space-y-6">
+    {% csrf_token %}
+    
+    <div class="form-control">
+        <label class="label" for="id_otp_code">
+            <span class="label-text">Verification Code</span>
+        </label>
+        {{ form.otp_code }}
+        {% if form.otp_code.errors %}
+        <label class="label">
+            <span class="label-text-alt text-error">{{ form.otp_code.errors.0 }}</span>
+        </label>
+        {% endif %}
+    </div>
+    
+    <button type="submit" class="btn btn-primary btn-block">Verify</button>
+    
+    <div class="text-center">
+        <a href="{% url 'frontend:login' %}" class="text-sm text-primary hover:text-primary-focus">Back to login</a>
+    </div>
+</form>
+{% endblock %}

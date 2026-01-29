@@ -1,0 +1,42 @@
+{% extends "base/dashboard_base.html" %}
+
+{% block title %}Invite Member - E-Commerce{% endblock %}
+{% block page_title %}Invite Team Member{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title mb-4">Invite to Organization</h2>
+            
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                
+                <div class="form-control">
+                    <label class="label" for="id_email">
+                        <span class="label-text">Email Address</span>
+                    </label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">{{ form.email.errors.0 }}</span>
+                    </label>
+                    {% endif %}
+                </div>
+                
+                <div class="form-control">
+                    <label class="label" for="id_role">
+                        <span class="label-text">Role</span>
+                    </label>
+                    {{ form.role }}
+                </div>
+                
+                <div class="flex gap-3 pt-4">
+                    <a href="{% url 'frontend:tenant_detail' pk %}" class="btn btn-ghost flex-1">Cancel</a>
+                    <button type="submit" class="btn btn-primary flex-1">Send Invitation</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

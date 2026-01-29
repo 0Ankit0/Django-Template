@@ -1,0 +1,131 @@
+{% extends "base/dashboard_base.html" %}
+
+{% block title %}Settings - E-Commerce{% endblock %}
+{% block page_title %}Settings{% endblock %}
+
+{% block content %}
+<div class="max-w-2xl mx-auto space-y-6">
+    <!-- Profile Section -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title mb-4">
+                <i data-lucide="user" class="w-5 h-5"></i>
+                Profile
+            </h2>
+            
+            <form method="post" action="{% url 'frontend:settings_profile' %}" class="space-y-4">
+                {% csrf_token %}
+                
+                <div class="flex items-center gap-4 mb-6">
+                    <div class="avatar placeholder">
+                        <div class="bg-primary text-primary-content rounded-full w-16">
+                            <span class="text-2xl">{{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}</span>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-ghost btn-sm">Change Avatar</button>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">First Name</span>
+                        </label>
+                        {{ profile_form.first_name }}
+                    </div>
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text">Last Name</span>
+                        </label>
+                        {{ profile_form.last_name }}
+                    </div>
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Email</span>
+                    </label>
+                    {{ profile_form.email }}
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Password Section -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title mb-4">
+                <i data-lucide="lock" class="w-5 h-5"></i>
+                Change Password
+            </h2>
+            
+            <form method="post" action="{% url 'frontend:settings_password' %}" class="space-y-4">
+                {% csrf_token %}
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Current Password</span>
+                    </label>
+                    {{ password_form.old_password }}
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">New Password</span>
+                    </label>
+                    {{ password_form.new_password1 }}
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Confirm New Password</span>
+                    </label>
+                    {{ password_form.new_password2 }}
+                </div>
+                
+                <button type="submit" class="btn btn-primary">Update Password</button>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Security Section -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title mb-4">
+                <i data-lucide="shield" class="w-5 h-5"></i>
+                Security
+            </h2>
+            
+            <div class="flex items-center justify-between p-4 bg-base-200 rounded-lg">
+                <div>
+                    <p class="font-semibold">Two-Factor Authentication</p>
+                    <p class="text-sm text-base-content/60">Add an extra layer of security to your account</p>
+                </div>
+                <a href="{% url 'frontend:settings_security' %}" class="btn btn-outline btn-sm">
+                    <i data-lucide="settings" class="w-4 h-4"></i>
+                    Configure
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Danger Zone -->
+    <div class="card bg-base-100 shadow-sm border border-error">
+        <div class="card-body">
+            <h2 class="card-title text-error mb-4">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                Danger Zone
+            </h2>
+            
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="font-semibold">Delete Account</p>
+                    <p class="text-sm text-base-content/60">Permanently delete your account and all data</p>
+                </div>
+                <button class="btn btn-error btn-outline btn-sm">Delete Account</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

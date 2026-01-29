@@ -37,6 +37,7 @@ pydantic = "*"                              # Data validation using Python type 
 social-auth-core = "*"                      # Core social authentication library
 psycopg2-binary = "*"                       # PostgreSQL adapter for Python
 whitenoise = "*"                            # WhiteNoise for serving static files in Django
+six = "*"                                   # Python 2/3 compatibility library used by social-auth-app-django
 
 [dev-packages]
 ruff = "*"                                  # Fast Python linter and formatter

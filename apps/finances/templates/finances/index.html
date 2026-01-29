@@ -1,0 +1,147 @@
+{% extends "base/dashboard_base.html" %}
+
+{% block title %}Finances - E-Commerce{% endblock %}
+{% block page_title %}Finances{% endblock %}
+
+{% block content %}
+<!-- Current Plan -->
+<div class="card bg-base-100 shadow-sm mb-6">
+    <div class="card-body">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+                <h2 class="card-title">Current Plan</h2>
+                <p class="text-3xl font-bold text-primary mt-2">Free Plan</p>
+                <p class="text-base-content/60">Basic features for getting started</p>
+            </div>
+            <div class="mt-4 md:mt-0">
+                <a href="{% url 'frontend:subscription' %}" class="btn btn-primary">
+                    <i data-lucide="sparkles" class="w-4 h-4"></i>
+                    Upgrade Plan
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Payment Methods -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="card-title">Payment Methods</h3>
+                <a href="{% url 'frontend:payment_methods' %}" class="btn btn-ghost btn-sm">Manage</a>
+            </div>
+            
+            <div class="text-center py-8">
+                <i data-lucide="credit-card" class="w-12 h-12 mx-auto text-base-content/30 mb-4"></i>
+                <p class="text-base-content/60">No payment methods added</p>
+                <a href="{% url 'frontend:payment_methods' %}" class="btn btn-primary btn-sm mt-4">
+                    Add Payment Method
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Billing History -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h3 class="card-title mb-4">Billing History</h3>
+            
+            <div class="text-center py-8">
+                <i data-lucide="receipt" class="w-12 h-12 mx-auto text-base-content/30 mb-4"></i>
+                <p class="text-base-content/60">No billing history</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Available Plans -->
+<h2 class="text-2xl font-bold mt-8 mb-6">Available Plans</h2>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Free Plan -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h3 class="card-title">Free</h3>
+            <p class="text-3xl font-bold">$0<span class="text-sm font-normal text-base-content/60">/month</span></p>
+            <ul class="mt-4 space-y-2">
+                <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
+                    1 Organization
+                </li>
+                <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
+                    5 Team Members
+                </li>
+                <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
+                    Basic Support
+                </li>
+            </ul>
+            <div class="card-actions mt-6">
+                <button class="btn btn-primary btn-block" disabled>Current Plan</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Pro Plan -->
+    <div class="card bg-primary text-primary-content shadow-sm">
+        <div class="card-body">
+            <div class="flex justify-between items-center">
+                <h3 class="card-title">Pro</h3>
+                <span class="badge badge-secondary">Popular</span>
+            </div>
+            <p class="text-3xl font-bold">$29<span class="text-sm font-normal opacity-80">/month</span></p>
+            <ul class="mt-4 space-y-2">
+                <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    5 Organizations
+                </li>
+                <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Unlimited Team Members
+                </li>
+                <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Priority Support
+                </li>
+                <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    Advanced Analytics
+                </li>
+            </ul>
+            <div class="card-actions mt-6">
+                <button class="btn btn-secondary btn-block">Upgrade to Pro</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Enterprise Plan -->
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h3 class="card-title">Enterprise</h3>
+            <p class="text-3xl font-bold">Custom</p>
+            <ul class="mt-4 space-y-2">
+                <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
+                    Unlimited Organizations
+                </li>
+                <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
+                    Unlimited Team Members
+                </li>
+                <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
+                    Dedicated Support
+                </li>
+                <li class="flex items-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
+                    Custom Integrations
+                </li>
+            </ul>
+            <div class="card-actions mt-6">
+                <button class="btn btn-outline btn-block">Contact Sales</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

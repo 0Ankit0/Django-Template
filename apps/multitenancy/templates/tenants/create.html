@@ -1,0 +1,35 @@
+{% extends "base/dashboard_base.html" %}
+
+{% block title %}Create Organization - E-Commerce{% endblock %}
+{% block page_title %}Create Organization{% endblock %}
+
+{% block content %}
+<div class="max-w-lg mx-auto">
+    <div class="card bg-base-100 shadow-sm">
+        <div class="card-body">
+            <h2 class="card-title mb-4">New Organization</h2>
+            
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                
+                <div class="form-control">
+                    <label class="label" for="id_name">
+                        <span class="label-text">Organization Name</span>
+                    </label>
+                    {{ form.name }}
+                    {% if form.name.errors %}
+                    <label class="label">
+                        <span class="label-text-alt text-error">{{ form.name.errors.0 }}</span>
+                    </label>
+                    {% endif %}
+                </div>
+                
+                <div class="flex gap-3 pt-4">
+                    <a href="{% url 'frontend:tenants' %}" class="btn btn-ghost flex-1">Cancel</a>
+                    <button type="submit" class="btn btn-primary flex-1">Create</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

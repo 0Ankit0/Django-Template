@@ -25,6 +25,8 @@ class UserManager(BaseUserManager):
 
         UserProfile.objects.create(user=user)
 
+        TenantMembership.objects.associate_invitations_with_user(normalized_email, user)
+
         return user
 
     def create_superuser(self, email, password):

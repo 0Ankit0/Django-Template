@@ -1,0 +1,17 @@
+<div class="flex items-start gap-4 p-4 rounded-lg transition-colors {% if not notification.is_read %}bg-primary/5{% else %}bg-base-200{% endif %}" id="notification-{{ notification.id }}">
+    <div class="bg-primary/10 p-3 rounded-full">
+        <i data-lucide="bell" class="w-5 h-5 text-primary"></i>
+    </div>
+    <div class="flex-1">
+        <p class="font-medium">{{ notification.type }}</p>
+        <p class="text-sm text-base-content/60">{{ notification.created_at|timesince }} ago</p>
+    </div>
+    {% if not notification.is_read %}
+    <button hx-post="{% url 'frontend:notification_read' notification.id %}"
+            hx-target="#notification-{{ notification.id }}"
+            hx-swap="outerHTML"
+            class="btn btn-ghost btn-sm">
+        <i data-lucide="check" class="w-4 h-4"></i>
+    </button>
+    {% endif %}
+</div>

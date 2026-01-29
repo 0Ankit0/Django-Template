@@ -5,7 +5,7 @@ from celery.schedules import crontab
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
-app = Celery("ecommerce")
+app = Celery("django_template")
 
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
