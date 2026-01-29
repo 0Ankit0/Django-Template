@@ -23,6 +23,7 @@ django-celery-beat = "*"                    # Beat scheduler for Celery
 inflection = "*"                            # Utility library for converting between singular and plural forms of words
 sentry-sdk = "*"                            # Sentry SDK for error tracking
 drf-access-policy = "*"                     # Access policy for DRF APIs
+pyotp = "*"                                 # OTP generation for authentication
 
 [dev-packages]
 
