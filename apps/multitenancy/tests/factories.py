@@ -4,7 +4,7 @@ from .. import constants, models
 
 
 class TenantFactory(factory.django.DjangoModelFactory):
-    created_by = factory.SubFactory("apps.users.tests.factories.UserFactory")
+    created_by = factory.SubFactory("users.tests.factories.UserFactory")
     type = factory.Iterator(constants.TenantType.values)
     name = factory.Faker("pystr")
     slug = factory.Faker("pystr")
@@ -17,8 +17,8 @@ class TenantFactory(factory.django.DjangoModelFactory):
 
 
 class TenantMembershipFactory(factory.django.DjangoModelFactory):
-    user = factory.SubFactory("apps.users.tests.factories.UserFactory")
-    created_by = factory.SubFactory("apps.users.tests.factories.UserFactory")
+    user = factory.SubFactory("users.tests.factories.UserFactory")
+    created_by = factory.SubFactory("users.tests.factories.UserFactory")
     tenant = factory.SubFactory(TenantFactory)
     role = factory.Iterator(constants.TenantUserRole.values)
     created_at = factory.Faker("date_time")

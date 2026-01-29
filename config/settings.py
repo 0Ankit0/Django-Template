@@ -39,43 +39,67 @@ DEBUG = env("DJANGO_DEBUG")
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=[])
 
 
-# Application definition
+DJANGO_CORE_APPS = [
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+]
 
+THIRD_PARTY_APPS = [
+    "django_extensions",
+    "tailwind",
+    "django_celery_results",
+    "django_celery_beat",
+    "djstripe",
+    "django_hosts",
+    "drf_yasg",
+    "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
+    "social_django",
+    "whitenoise",
+    "channels",
+]
 
 # Auto Discover apps in the project
-discovered_apps = []
+LOCAL_APPS = []
 APPS_DIR = os.path.join(BASE_DIR, 'apps')
 for app_name in os.listdir(APPS_DIR):
     app_path = os.path.join(APPS_DIR, app_name)
     if os.path.isdir(app_path) and os.path.isfile(os.path.join(app_path, '__init__.py')):
         try:
             importlib.import_module(app_name)
-            discovered_apps.append(app_name)
+            LOCAL_APPS.append(app_name)
         except ImportError as e:
             print(f"Could not import app {app_name}: {e}") 
 
 INSTALLED_APPS = [
-    *discovered_apps,
-    'tailwind',
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
-    'rest_framework',
+    *LOCAL_APPS,
+    *DJANGO_CORE_APPS,
+    *THIRD_PARTY_APPS,    
 ]
 
 
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
-    'django.contrib.sessions.middleware.SessionMiddleware',
-    'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
-    'django.contrib.auth.middleware.AuthenticationMiddleware',
-    'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    #  HealthCheckMiddleware needs to be before the HostsRequestMiddleware
+    "core.middleware.HealthCheckMiddleware",
+    "core.middleware.ManageCookiesMiddleware",
+    "core.middleware.SetAuthTokenCookieMiddleware",
+    "django_hosts.middleware.HostsRequestMiddleware",
+    "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
+    "django.middleware.common.CommonMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+    "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django_hosts.middleware.HostsResponseMiddleware",
+    "social_django.middleware.SocialAuthExceptionMiddleware",
 ]
 
 ROOT_URLCONF = 'config.urls'
@@ -130,7 +154,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Add custom user model as the default user model
 AUTH_USER_MODEL = 'iam.User'
 # OR if you have imported the model
-# from apps.user_management.models import User
+# from user_management.models import User
 # AUTH_USER_MODEL = User
 
 # Internationalization
@@ -147,10 +171,10 @@ USE_TZ = True
 
 # Django REST Framework settings
 REST_FRAMEWORK = {
-    "EXCEPTION_HANDLER": "apps.core.utils.custom_exception_handler",
+    "EXCEPTION_HANDLER": "core.utils.custom_exception_handler",
     "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "apps.iam.authentication.JSONWebTokenCookieAuthentication",
+        "iam.authentication.JSONWebTokenCookieAuthentication",
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ),
@@ -174,7 +198,7 @@ COOKIE_MAX_AGE = 3600 * 24 * 14  # 14 days
 
 SOCIAL_AUTH_USER_MODEL = "iam.User"
 SOCIAL_AUTH_USER_FIELDS = ["email", "username"]
-# SOCIAL_AUTH_STRATEGY = "apps.iam.strategy.DjangoJWTStrategy"  # Uncomment when social auth is needed
+# SOCIAL_AUTH_STRATEGY = "iam.strategy.DjangoJWTStrategy"  # Uncomment when social auth is needed
 SOCIAL_AUTH_JSONFIELD_ENABLED = True
 SOCIAL_AUTH_REDIRECT_IS_HTTPS = env.bool("SOCIAL_AUTH_REDIRECT_IS_HTTPS", default=True)
 SOCIAL_AUTH_PIPELINE = (
@@ -186,7 +210,7 @@ SOCIAL_AUTH_PIPELINE = (
     "social_core.pipeline.user.create_user",
     "social_core.pipeline.social_auth.associate_user",
     "social_core.pipeline.social_auth.load_extra_data",
-    # "apps.multitenancy.pipeline.create_default_tenant",  # Uncomment when multitenancy is added
+    # "multitenancy.pipeline.create_default_tenant",  # Uncomment when multitenancy is added
     "social_core.pipeline.user.user_details",
 )
 SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS = env.list("SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS", default=[])
@@ -234,7 +258,7 @@ STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 TAILWIND_APP_NAME = 'theme'
 
 # Custom error handlers
-handler400 = 'apps.core.views.custom_400_view'
-handler403 = 'apps.core.views.custom_403_view'
-handler404 = 'apps.core.views.custom_404_view'
-handler500 = 'apps.core.views.custom_500_view'
+handler400 = 'core.views.custom_400_view'
+handler403 = 'core.views.custom_403_view'
+handler404 = 'core.views.custom_404_view'
+handler500 = 'core.views.custom_500_view'

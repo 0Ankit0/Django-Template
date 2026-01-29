@@ -1,6 +1,6 @@
 from django.conf import settings
-from apps.core.models.mixins import ImageWithThumbnailMixin
-from apps.core.storage import UniqueFilePathGenerator
+from core.models.mixins import ImageWithThumbnailMixin
+from core.storage import UniqueFilePathGenerator
 from config.settings import DEFAULT_FILE_STORAGE
 import hashid_field
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Group, PermissionsMixin

@@ -11,7 +11,7 @@ pytestmark = pytest.mark.django_db
 
 class TestTenant:
     def test_save_unique_slug_generation(self, user):
-        with patch("apps.multitenancy.models.slugify", side_effect=slugify) as mock_slugify:
+        with patch("multitenancy.models.slugify", side_effect=slugify) as mock_slugify:
             tenant = Tenant(name="Test Tenant", created_by=user)
             tenant.save()
 
@@ -20,7 +20,7 @@ class TestTenant:
 
     def test_save_unique_slug_with_collision(self, user, tenant_factory):
         tenant_factory(name="Test Tenant", created_by=user)
-        with patch("apps.multitenancy.models.slugify", side_effect=slugify) as mock_slugify:
+        with patch("multitenancy.models.slugify", side_effect=slugify) as mock_slugify:
             tenant = Tenant(name="Test Tenant", created_by=user)
             tenant.save()
 

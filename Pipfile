@@ -13,7 +13,6 @@ django-tailwind = "*"                       # Integration of Tailwind CSS with D
 django-hashid-field = "*"                   # Hashids for Django models
 django-environ = "*"                        # Environment variables management for Django
 pillow = "*"                                # Image processing library for handling image uploads    
-django-storages = "*"                       # Storage backends for Django, including S3 support
 boto3 = "*"                                 # AWS SDK for Python, used with django-storages for S3
 channels = "*"                              # Django Channels for handling WebSockets and asynchronous tasks    
 setuptools = "*"                            # Package development and distribution utilities
@@ -24,8 +23,26 @@ inflection = "*"                            # Utility library for converting bet
 sentry-sdk = "*"                            # Sentry SDK for error tracking
 drf-access-policy = "*"                     # Access policy for DRF APIs
 pyotp = "*"                                 # OTP generation for authentication
+dj-stripe = "*"                             # Stripe integration for Django
+django-extensions = "*"                     # Django extensions for development
+drf-yasg = "*"                              # OpenAPI schema and documentation generation for DRF
+social-auth-app-django = "*"                # Social authentication for Django
+django-storages = "*"                       # Storage backends for Django, including S3 support
+django-hosts = "*"                          # Django hosts for multi-tenant support
+django-redis = "*"                          # Redis integration for Django
+django-ratelimit = "*"                      # Rate limiting for Django
+daphne = "*"                                # Daphne for WebSocket support
+redis = "*"                                 # Redis client for Python
+pydantic = "*"                              # Data validation using Python type hints
+social-auth-core = "*"                      # Core social authentication library
+psycopg2-binary = "*"                       # PostgreSQL adapter for Python
+whitenoise = "*"                            # WhiteNoise for serving static files in Django
 
 [dev-packages]
+ruff = "*"                                  # Fast Python linter and formatter
+mypy = "*"                                  # Static type checker for Python
+django-stubs = "*"                          # Type hints for Django
+pre-commit = "*"                            # Framework for managing pre-commit hooks
 
 [requires]
 python_version = "3.14"

@@ -1,6 +1,6 @@
 from django.utils.deprecation import MiddlewareMixin
 
-from apps.users.utils import reset_auth_cookie, set_auth_cookie
+from users.utils import reset_auth_cookie, set_auth_cookie
 from config import settings
 
 class SetAuthTokenCookieMiddleware:

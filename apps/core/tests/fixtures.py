@@ -6,7 +6,7 @@ from django.conf import settings
 
 @pytest.fixture(autouse=True)
 def lambda_task_apply(mocker):
-    spy = mocker.patch("common.tasks.LambdaTask._apply")
+    spy = mocker.patch("core.tasks.LambdaTask._apply")
 
     def assert_task_applied(
         source: str,

@@ -1,4 +1,4 @@
-from apps.multitenancy.constants import TenantUserRole
+from multitenancy.constants import TenantUserRole
 
 
 def make_statement(action, effect, principal, condition=None):

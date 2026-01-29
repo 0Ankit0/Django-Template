@@ -1,7 +1,7 @@
 import logging
 
-from apps.notifications import sender
-from common import emails
+from notifications import sender
+from core import emails
 
 from . import constants, email_serializers, models
 

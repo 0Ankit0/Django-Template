@@ -121,7 +121,7 @@ class TenantConsumer(AsyncWebsocketConsumer):
     @database_sync_to_async
     def verify_tenant_access(self):
         """Verify if user has access to the tenant"""
-        from apps.multitenancy.models import TenantMembership
+        from multitenancy.models import TenantMembership
 
         try:
             return TenantMembership.objects.filter(user=self.user, tenant_id=self.tenant_id, is_accepted=True).exists()

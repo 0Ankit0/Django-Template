@@ -11,7 +11,7 @@ os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 # Setup Django
 django.setup()
 
-from apps.iam.models import Group, User
+from iam.models import Group, User
 
 def seed_groups():
     """Seed default groups."""

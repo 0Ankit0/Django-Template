@@ -101,7 +101,7 @@ class Tenant(BaseModel):
         self.__original_name = self.name
 
 
-class TenantMembership(TimestampedMixin, models.Model):
+class TenantMembership(BaseModel):
     """
     Represents the membership of a user in a tenant. As well accepted as not accepted (invitations).
 

@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers,urls
 from iam import views
-from apps.core import views as core_views
+from core import views as core_views
 from django.conf import settings
 from django.conf.urls.static import static
 
