@@ -12,13 +12,23 @@ class TenantViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        return models.Tenant.objects.filter(membership__user=self.request.user).distinct()
+        return models.Tenant.objects.filter(user_memberships__user=self.request.user).distinct()
 
     def perform_create(self, serializer):
         tenant = serializer.save(created_by=self.request.user)
         models.TenantMembership.objects.create(
             tenant=tenant, user=self.request.user, role=models.TenantUserRole.OWNER, invitee=self.request.user
         )
+
+    @action(detail=True, methods=["post"])
+    def switch(self, request, pk=None):
+        tenant = self.get_object()
+        # Ensure user is a member (get_queryset handles this largely, but explicit check doesn't hurt)
+        if not models.TenantMembership.objects.filter(tenant=tenant, user=request.user).exists():
+            return Response({"detail": "You are not a member of this tenant."}, status=status.HTTP_403_FORBIDDEN)
+        
+        request.session['tenant_id'] = str(tenant.id)
+        return Response({"detail": f"Switched to {tenant.name}", "tenant_id": str(tenant.id)})
 
 
 class TenantMembershipViewSet(viewsets.ModelViewSet):

@@ -1,3 +1,4 @@
+import os
 import subprocess
 import sys
 import threading
@@ -9,9 +10,11 @@ class Command(RunserverCommand):
         self.tailwind_process = subprocess.Popen([sys.executable, 'manage.py', 'tailwind', 'start'])
 
     def handle(self, *args, **options):
-        # Start Tailwind in a background thread
-        thread = threading.Thread(target=self.run_tailwind, daemon=True)
-        thread.start()
+        # Start Tailwind in a background thread only if this is the main process
+        # (not the auto-reloader child process)
+        if os.environ.get('RUN_MAIN') != 'true':
+            thread = threading.Thread(target=self.run_tailwind, daemon=True)
+            thread.start()
         try:
             super().handle(*args, **options)
         finally:

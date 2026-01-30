@@ -1,0 +1,232 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2026-01-30 01:35+0000\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: apps/core/models/mixins.py:21
+msgid "Unsupported image file format."
+msgstr ""
+
+#: apps/core/templates/base/base.html:33
+#: apps/core/templates/base/dashboard_base.html:19
+#: apps/core/templates/base/dashboard_base.html:197
+msgid "Dashboard"
+msgstr "ड्यासबोर्ड"
+
+#: apps/core/templates/base/base.html:34
+#: apps/core/templates/base/dashboard_base.html:63
+msgid "Logout"
+msgstr "लग आउट"
+
+#: apps/core/templates/base/base.html:36
+msgid "Login"
+msgstr "लग इन"
+
+#: apps/core/templates/base/base.html:37
+msgid "Sign up"
+msgstr "साइन अप"
+
+#: apps/core/templates/base/dashboard_base.html:35
+#: apps/core/templates/base/dashboard_base.html:239
+#: apps/core/templates/base/dashboard_base.html:240
+#: apps/core/templates/base/dashboard_base.html:241
+msgid "Notifications"
+msgstr "सूचनाहरू"
+
+#: apps/core/templates/base/dashboard_base.html:36
+msgid "View all"
+msgstr "सबै हेर्नुहोस्"
+
+#: apps/core/templates/base/dashboard_base.html:45
+msgid "No notifications"
+msgstr "कुनै सूचना छैन"
+
+#: apps/core/templates/base/dashboard_base.html:62
+#: apps/core/templates/base/dashboard_base.html:265
+#: apps/core/templates/base/dashboard_base.html:267
+msgid "Settings"
+msgstr "सेटिङहरू"
+
+#: apps/core/templates/base/dashboard_base.html:135
+msgid "Select Org"
+msgstr "संस्था छान्नुहोस्"
+
+#: apps/core/templates/base/dashboard_base.html:138
+msgid "Free Plan"
+msgstr "नि:शुल्क योजना"
+
+#: apps/core/templates/base/dashboard_base.html:146
+msgid "Organizations"
+msgstr "संस्थाहरू"
+
+#: apps/core/templates/base/dashboard_base.html:176
+msgid "Manage Organizations"
+msgstr "संस्थाहरू व्यवस्थापन गर्नुहोस्"
+
+#: apps/core/templates/base/dashboard_base.html:182
+msgid "Create Organization"
+msgstr "संस्था सिर्जना गर्नुहोस्"
+
+#: apps/core/templates/base/dashboard_base.html:208
+msgid "Business"
+msgstr "व्यापार"
+
+#: apps/core/templates/base/dashboard_base.html:212
+#: apps/core/templates/base/dashboard_base.html:213
+#: apps/core/templates/base/dashboard_base.html:214
+msgid "Products"
+msgstr "सामानहरु"
+
+#: apps/core/templates/base/dashboard_base.html:218
+#: apps/core/templates/base/dashboard_base.html:219
+#: apps/core/templates/base/dashboard_base.html:220
+msgid "Finances"
+msgstr "वित्त"
+
+#: apps/core/templates/base/dashboard_base.html:235
+msgid "Tools"
+msgstr "उपकरणहरू"
+
+#: apps/core/templates/base/dashboard_base.html:248
+#: apps/core/templates/base/dashboard_base.html:249
+#: apps/core/templates/base/dashboard_base.html:250
+msgid "Documents"
+msgstr "कागजातहरू"
+
+#: apps/core/templates/base/dashboard_base.html:254
+#: apps/core/templates/base/dashboard_base.html:255
+#: apps/core/templates/base/dashboard_base.html:256
+msgid "AI Ideas"
+msgstr "AI विचारहरू"
+
+#: apps/finances/serializers.py:192
+msgid "Customer has no payment method setup"
+msgstr ""
+
+#: apps/finances/serializers.py:239
+msgid "Customer has no paid subscription to cancel"
+msgstr ""
+
+#: apps/finances/serializers.py:283
+msgid "Successful charge does not exist"
+msgstr ""
+
+#: apps/finances/serializers.py:287
+msgid "Charge has already been fully refunded"
+msgstr ""
+
+#: apps/finances/templates/djstripe/charge/admin/change_form.html:12
+#: apps/finances/templates/djstripe/paymentintent/admin/change_form.html:11
+msgid "Refund"
+msgstr ""
+
+#: apps/iam/models/groups.py:12
+msgid "group"
+msgstr ""
+
+#: apps/iam/models/groups.py:13
+msgid "groups"
+msgstr ""
+
+#: apps/iam/models/permissions.py:12
+msgid "permission"
+msgstr ""
+
+#: apps/iam/models/permissions.py:13
+msgid "permissions"
+msgstr ""
+
+#: apps/iam/serializers/user_serializer.py:39
+msgid "Too large file"
+msgstr ""
+
+#: apps/iam/serializers/user_serializer.py:115
+msgid "Malformed user account confirmation token"
+msgstr ""
+
+#: apps/iam/serializers/user_serializer.py:128
+msgid "Old password"
+msgstr ""
+
+#: apps/iam/serializers/user_serializer.py:129
+#: apps/iam/serializers/user_serializer.py:189
+msgid "New password"
+msgstr ""
+
+#: apps/iam/serializers/user_serializer.py:143
+msgid "Wrong old password"
+msgstr ""
+
+#: apps/iam/serializers/user_serializer.py:162
+msgid "User e-mail"
+msgstr ""
+
+#: apps/iam/serializers/user_serializer.py:190
+#: apps/multitenancy/serializers.py:40
+msgid "Token"
+msgstr ""
+
+#: apps/iam/serializers/user_serializer.py:205
+#: apps/iam/serializers/user_serializer.py:208
+msgid "Malformed password reset token"
+msgstr ""
+
+#: apps/iam/serializers/user_serializer.py:224
+msgid "No active account found with the given credentials"
+msgstr ""
+
+#: apps/iam/serializers/user_serializer.py:256
+#: apps/iam/serializers/user_serializer.py:291
+msgid "No valid token found in cookie 'refresh_token' or field 'refresh'"
+msgstr ""
+
+#: apps/iam/templates/auth/password_reset_email.html:3
+#, python-format
+msgid ""
+"You're receiving this email because you requested a password reset for your "
+"user account at %(site_name)s."
+msgstr ""
+
+#: apps/iam/templates/auth/password_reset_email.html:5
+msgid "Please go to the following page and choose a new password:"
+msgstr ""
+
+#: apps/iam/templates/auth/password_reset_email.html:10
+#, python-format
+msgid "Your username, in case you've forgotten: %(user.get_username)s"
+msgstr ""
+
+#: apps/iam/templates/auth/password_reset_email.html:12
+msgid "Thanks for using our site!"
+msgstr ""
+
+#: apps/iam/templates/auth/password_reset_email.html:14
+#, python-format
+msgid "The %(site_name)s team"
+msgstr ""
+
+#: apps/multitenancy/serializers.py:52
+msgid "Malformed tenant invitation token"
+msgstr ""
+
+#: apps/multitenancy/serializers.py:107
+msgid "Invitation for personal tenant cannot be created."
+msgstr ""
+
+#: apps/multitenancy/serializers.py:113
+msgid "Invitation already exists"
+msgstr ""

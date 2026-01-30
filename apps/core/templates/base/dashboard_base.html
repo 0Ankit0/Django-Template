@@ -16,7 +16,7 @@
                 </label>
             </div>
             <div class="flex-1">
-                <span class="text-xl font-bold px-4">{% block page_title %}Dashboard{% endblock %}</span>
+                <span class="text-xl font-bold px-4">{% block page_title %}{% trans "Dashboard" %}{% endblock %}</span>
             </div>
             <div class="flex-none gap-2">
                 <!-- Notifications -->
@@ -32,8 +32,8 @@
                     <div x-show="open" @click.away="open = false"
                          class="dropdown-content z-[1] menu p-2 shadow-lg bg-base-100 rounded-box w-80 mt-3">
                         <div class="flex justify-between items-center px-4 py-2 border-b border-base-200">
-                            <span class="font-semibold">Notifications</span>
-                            <a href="{% url 'notifications:list' %}" class="text-sm text-primary">View all</a>
+                            <span class="font-semibold">{% trans "Notifications" %}</span>
+                            <a href="{% url 'notifications:list' %}" class="text-sm text-primary">{% trans "View all" %}</a>
                         </div>
                         <div class="max-h-64 overflow-y-auto">
                             {% for notification in notifications|slice:":5" %}
@@ -42,7 +42,7 @@
                                 <p class="text-xs text-base-content/60">{{ notification.created_at|timesince }} ago</p>
                             </div>
                             {% empty %}
-                            <p class="px-4 py-8 text-center text-base-content/60">No notifications</p>
+                            <p class="px-4 py-8 text-center text-base-content/60">{% trans "No notifications" %}</p>
                             {% endfor %}
                         </div>
                     </div>
@@ -51,7 +51,7 @@
                 <!-- User Menu -->
                 <div class="dropdown dropdown-end">
                     <div tabindex="0" role="button" class="btn btn-ghost btn-circle avatar placeholder">
-                        <div class="bg-primary text-primary-content rounded-full w-10">
+                        <div class="menu-active rounded-full w-10">
                             <span>{{ user.first_name|slice:":1"|upper }}{{ user.last_name|slice:":1"|upper }}</span>
                         </div>
                     </div>
@@ -59,8 +59,8 @@
                         <li class="menu-title">
                             <span>{{ user.email }}</span>
                         </li>
-                        <li><a href="{% url 'iam:settings' %}"><i data-lucide="settings" class="w-4 h-4"></i> Settings</a></li>
-                        <li><a href="{% url 'iam:logout' %}"><i data-lucide="log-out" class="w-4 h-4"></i> Logout</a></li>
+                        <li><a href="{% url 'iam:settings' %}"><i data-lucide="settings" class="w-4 h-4"></i> {% trans "Settings" %}</a></li>
+                        <li><a href="{% url 'iam:logout' %}"><i data-lucide="log-out" class="w-4 h-4"></i> {% trans "Logout" %}</a></li>
                     </ul>
                 </div>
             </div>
@@ -69,10 +69,34 @@
         <!-- Main Content -->
         <main class="flex-1 p-6 bg-base-200">
             {% if messages %}
-            <div class="mb-4">
+            <div class="toast toast-top toast-end z-50">
                 {% for message in messages %}
-                <div class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %} mb-2">
+                <div x-data="{ show: true }" 
+                     x-show="show" 
+                     x-init="setTimeout(() => show = false, 3000)"
+                     x-transition:enter="transition ease-out duration-300"
+                     x-transition:enter-start="opacity-0 translate-x-2"
+                     x-transition:enter-end="opacity-100 translate-x-0"
+                     x-transition:leave="transition ease-in duration-300"
+                     x-transition:leave-start="opacity-100 translate-x-0"
+                     x-transition:leave-end="opacity-0 translate-x-2"
+                     class="alert {% if message.tags == 'error' %}alert-error{% elif message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% else %}alert-info{% endif %} shadow-lg grid-cols-[auto_1fr_auto]">
+                    
+                    {% if message.tags == 'error' %}
+                        <i data-lucide="alert-circle" class="w-6 h-6"></i>
+                    {% elif message.tags == 'success' %}
+                        <i data-lucide="check-circle" class="w-6 h-6"></i>
+                    {% elif message.tags == 'warning' %}
+                        <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+                    {% else %}
+                        <i data-lucide="info" class="w-6 h-6"></i>
+                    {% endif %}
+
                     <span>{{ message }}</span>
+                    
+                    <button @click="show = false" class="btn btn-sm btn-ghost btn-circle">
+                        <i data-lucide="x" class="w-4 h-4"></i>
+                    </button>
                 </div>
                 {% endfor %}
             </div>
@@ -108,10 +132,10 @@
                                         {% if request.tenant %}
                                             {{ request.tenant.name }}
                                         {% else %}
-                                            Select Org
+                                            {% trans "Select Org" %}
                                         {% endif %}
                                     </span>
-                                    <span class="block text-xs text-base-content/60">Free Plan</span>
+                                    <span class="block text-xs text-base-content/60">{% trans "Free Plan" %}</span>
                                 </div>
                             </div>
                             <i data-lucide="chevrons-up-down" class="w-4 h-4 text-base-content/50 is-drawer-close:hidden"></i>
@@ -119,12 +143,12 @@
 
                         <div tabindex="0" class="dropdown-content z-[2] menu p-2 shadow-lg bg-base-100 rounded-box w-64 mt-2 border border-base-200 origin-top-left">
                             <div class="px-2 py-2 mb-2 border-b border-base-200 flex justify-between items-center">
-                                <span class="text-xs font-semibold text-base-content/50">Organizations</span>
+                                <span class="text-xs font-semibold text-base-content/50">{% trans "Organizations" %}</span>
                             </div>
                             
                             <div class="max-h-64 overflow-y-auto custom-scrollbar">
                                 {% for membership in request.user.tenant_memberships.all %}
-                                <a href="{% url 'multitenancy:switch' membership.tenant.id %}" class="flex items-center gap-3 p-2 rounded-lg hover:bg-base-200 group {% if request.tenant.id == membership.tenant.id %}bg-base-200{% endif %}">
+                                <a href="#" onclick="switchTenant('{{ membership.tenant.id }}'); return false;" class="flex items-center gap-3 p-2 rounded-lg hover:bg-base-200 group {% if request.tenant.id == membership.tenant.id %}bg-base-200{% endif %}">
                                     <div class="avatar placeholder">
                                         <div class="bg-neutral text-neutral-content rounded w-8">
                                             <span class="text-xs">{{ membership.tenant.name|slice:":1"|upper }}</span>
@@ -149,13 +173,13 @@
                                 <li>
                                     <a href="{% url 'multitenancy:list' %}">
                                         <i data-lucide="settings-2" class="w-4 h-4"></i>
-                                        Manage Organizations
+                                        {% trans "Manage Organizations" %}
                                     </a>
                                 </li>
                                 <li>
                                     <a href="{% url 'multitenancy:create' %}">
                                         <i data-lucide="plus" class="w-4 h-4"></i>
-                                        Create Organization
+                                        {% trans "Create Organization" %}
                                     </a>
                                 </li>
                             </ul>
@@ -170,7 +194,7 @@
                     <li>
                         <a href="{% url 'core:dashboard' %}" class="grid grid-cols-[1.5rem_1fr] gap-3 {% is_active url_name='dashboard' %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Dashboard">
                             <i data-lucide="layout-dashboard" class="w-6 h-6"></i>
-                            <span class="is-drawer-close:hidden font-medium">Dashboard</span>
+                            <span class="is-drawer-close:hidden font-medium">{% trans "Dashboard" %}</span>
                         </a>
                     </li>
                     
@@ -181,19 +205,19 @@
                         <details {% if active_products or active_finances %}open{% endif %}>
                             <summary class="group grid grid-cols-[1.5rem_1fr] gap-3">
                                 <i data-lucide="briefcase" class="w-6 h-6 group-open:text-primary"></i>
-                                <span class="is-drawer-close:hidden font-semibold group-open:text-primary">Business</span>
+                                <span class="is-drawer-close:hidden font-semibold group-open:text-primary">{% trans "Business" %}</span>
                             </summary>
                             <ul>
                                 <li>
-                                    <a href="{% url 'content:products_list' %}" class="{% if active_products %}bg-primary text-primary-content{% endif %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Products">
-                                        <span class="is-drawer-close:hidden">Products</span>
-                                        <span class="hidden is-drawer-close:inline">Products</span>
+                                    <a href="{% url 'content:products_list' %}" class="{% if active_products %}menu-active{% endif %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="{% trans 'Products' %}">
+                                        <span class="is-drawer-close:hidden">{% trans "Products" %}</span>
+                                        <span class="hidden is-drawer-close:inline">{% trans "Products" %}</span>
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{% url 'finances:index' %}" class="{% if active_finances %}bg-primary text-primary-content{% endif %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Finances">
-                                        <span class="is-drawer-close:hidden">Finances</span>
-                                        <span class="hidden is-drawer-close:inline">Finances</span>
+                                    <a href="{% url 'finances:index' %}" class="{% if active_finances %}menu-active{% endif %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="{% trans 'Finances' %}">
+                                        <span class="is-drawer-close:hidden">{% trans "Finances" %}</span>
+                                        <span class="hidden is-drawer-close:inline">{% trans "Finances" %}</span>
                                     </a>
                                 </li>
                             </ul>
@@ -208,28 +232,28 @@
                         <details {% if active_notif or active_docs or active_ai %}open{% endif %}>
                             <summary class="group grid grid-cols-[1.5rem_1fr] gap-3">
                                 <i data-lucide="wrench" class="w-6 h-6 group-open:text-primary"></i>
-                                <span class="is-drawer-close:hidden font-semibold group-open:text-primary">Tools</span>
+                                <span class="is-drawer-close:hidden font-semibold group-open:text-primary">{% trans "Tools" %}</span>
                             </summary>
                             <ul>
                                 <li>
-                                    <a href="{% url 'notifications:list' %}" class="{% if active_notif %}bg-primary text-primary-content{% endif %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Notifications">
-                                        <span class="is-drawer-close:hidden">Notifications</span>
-                                        <span class="hidden is-drawer-close:inline">Notifications</span>
+                                    <a href="{% url 'notifications:list' %}" class="{% if active_notif %}menu-active{% endif %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="{% trans 'Notifications' %}">
+                                        <span class="is-drawer-close:hidden">{% trans "Notifications" %}</span>
+                                        <span class="hidden is-drawer-close:inline">{% trans "Notifications" %}</span>
                                         {% if unread_count %}
                                         <span class="badge badge-primary badge-sm ml-auto is-drawer-close:hidden">{{ unread_count }}</span>
                                         {% endif %}
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{% url 'content:documents_list' %}" class="{% if active_docs %}bg-primary text-primary-content{% endif %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Documents">
-                                        <span class="is-drawer-close:hidden">Documents</span>
-                                        <span class="hidden is-drawer-close:inline">Documents</span>
+                                    <a href="{% url 'content:documents_list' %}" class="{% if active_docs %}menu-active{% endif %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="{% trans 'Documents' %}">
+                                        <span class="is-drawer-close:hidden">{% trans "Documents" %}</span>
+                                        <span class="hidden is-drawer-close:inline">{% trans "Documents" %}</span>
                                     </a>
                                 </li>
                                 <li>
-                                    <a href="{% url 'integrations:ai_ideas' %}" class="{% if active_ai %}bg-primary text-primary-content{% endif %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="AI Ideas">
-                                        <span class="is-drawer-close:hidden">AI Ideas</span>
-                                        <span class="hidden is-drawer-close:inline">AI Ideas</span>
+                                    <a href="{% url 'integrations:ai_ideas' %}" class="{% if active_ai %}menu-active{% endif %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="{% trans 'AI Ideas' %}">
+                                        <span class="is-drawer-close:hidden">{% trans "AI Ideas" %}</span>
+                                        <span class="hidden is-drawer-close:inline">{% trans "AI Ideas" %}</span>
                                     </a>
                                 </li>
                             </ul>
@@ -238,9 +262,9 @@
     
                     <!-- Settings -->
                     <li>
-                        <a href="{% url 'iam:settings' %}" class="grid grid-cols-[1.5rem_1fr] gap-3 {% is_active part_match='settings' %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="Settings">
+                        <a href="{% url 'iam:settings' %}" class="grid grid-cols-[1.5rem_1fr] gap-3 {% is_active part_match='settings' %} is-drawer-close:tooltip is-drawer-close:tooltip-right" data-tip="{% trans 'Settings' %}">
                             <i data-lucide="settings" class="w-6 h-6"></i>
-                            <span class="is-drawer-close:hidden font-medium">Settings</span>
+                            <span class="is-drawer-close:hidden font-medium">{% trans "Settings" %}</span>
                         </a>
                     </li>
                 </ul>
@@ -249,7 +273,7 @@
                 <div class="p-4 border-t border-base-300 bg-base-100 is-drawer-close:hidden">
                     <form action="{% url 'set_language' %}" method="post">
                         {% csrf_token %}
-                        <input name="next" type="hidden" value="{{ redirect_to }}">
+                        <input name="next" type="hidden" value="{{ request.get_full_path }}">
                         <div class="join w-full">
                             <select name="language" class="select select-bordered select-sm w-full join-item">
                                 {% get_current_language as LANGUAGE_CODE %}
@@ -268,4 +292,54 @@
             </div>
     </div>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Sidebar Persistence
+        const drawerToggle = document.getElementById('drawer-toggle');
+        if (drawerToggle) {
+            // Restore state
+            const savedState = localStorage.getItem('sidebar_expanded');
+            
+            // If saved state exists, apply it
+            if (savedState !== null) {
+                const isExpanded = savedState === 'true';
+                drawerToggle.checked = isExpanded;
+                
+                // Trigger change event to ensure any listeners update UI
+                // Using a small timeout to allow Alpine or other libs to init if needed
+                setTimeout(() => {
+                   drawerToggle.dispatchEvent(new Event('change')); 
+                }, 0);
+            }
+
+            // Save state on change
+            drawerToggle.addEventListener('change', function() {
+                localStorage.setItem('sidebar_expanded', drawerToggle.checked);
+            });
+        }
+    });
+
+    // Tenant Switcher Logic
+    function switchTenant(tenantId) {
+        fetch(`/api/tenants/${tenantId}/switch/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => {
+            if (response.ok) {
+                // Reload on success to refresh data
+                window.location.reload();
+            } else {
+                console.error('Failed to switch tenant');
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+</script>
 {% endblock %}

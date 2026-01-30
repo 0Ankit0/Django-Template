@@ -1,0 +1,67 @@
+[project]
+name = "django-template"
+version = "1.0.0"
+description = "Django Template with Django REST Framework"
+requires-python = ">=3.14"
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # Pyflakes
+    "I",      # isort
+    "B",      # flake8-bugbear
+    "C4",     # flake8-comprehensions
+    "UP",     # pyupgrade
+    "SIM",    # flake8-simplify
+]
+ignore = [
+    "E501",   # line too long (handled by formatter)
+    "B008",   # do not perform function calls in argument defaults
+    "B904",   # raise without from inside except
+    "B011",   # do not assert False
+    "SIM102", # use single if statement
+    "SIM103", # return negated condition directly
+    "SIM105", # use contextlib.suppress
+    "UP008",  # use super() instead of super(__class__, self)
+    "UP031",  # use format specifiers instead of percent format
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"**/migrations/*.py" = ["E501"]
+"conftest.py" = ["ARG001"]
+"**/tests/*.py" = ["ARG001", "ARG002"]
+"**/factories.py" = ["ARG001", "ARG002"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "common", "config"]
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings"
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --tb=short"
+
+[tool.coverage.run]
+source = ["apps"]
+omit = ["*/migrations/*", "*/tests/*"]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+]
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["mypy_django_plugin.main"]
+ignore_missing_imports = true
+strict = false
+
+[tool.django-stubs]
+django_settings_module = "config.settings"

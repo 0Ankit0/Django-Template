@@ -32,14 +32,14 @@ urlpatterns = [
     re_path(r"^redoc/", schema_view.with_ui("redoc"), name='schema-redoc'),
     
     path(
-        "",
+        "api/",
         include(
             [
                 # Authentication & User Management (single include to avoid namespace conflicts)
                 path("", include("iam.api.urls")),
 
                 # Multi-tenancy
-                path("tenants/", include("multitenancy.api.urls")),
+                path("", include("multitenancy.api.urls")),
 
                 # Notifications
                 path("", include("notifications.api.urls")),
@@ -56,8 +56,7 @@ urlpatterns = [
         ),
     ),
     
-    # i18n
-    path("i18n/", include("django.conf.urls.i18n")),
+
 ]
 
 # Browser reload for development

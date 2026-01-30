@@ -86,7 +86,7 @@ class ProfileForm(TailwindFormMixin, forms.ModelForm):
         from iam.models import User, UserProfile
 
         model = UserProfile
-        fields = ('first_name', 'last_name', 'avatar')
+        fields = ('first_name', 'last_name')
         widgets = {
             'first_name': forms.TextInput(attrs={'placeholder': 'First name'}),
             'last_name': forms.TextInput(attrs={'placeholder': 'Last name'}),
@@ -102,6 +102,8 @@ class ProfileForm(TailwindFormMixin, forms.ModelForm):
     
     def save(self, commit=True):
         profile = super().save(commit=False)
+        if not profile.user_id and self.user:
+            profile.user = self.user
         
         # Update email on user model
         if self.user and 'email' in self.cleaned_data:

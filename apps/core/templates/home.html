@@ -1,4 +1,4 @@
-{% load static tailwind_tags %}
+{% load static tailwind_tags i18n %}
 <!DOCTYPE html>
 <html lang="en" class="h-full">
 <head>
@@ -30,7 +30,7 @@
       <div class="flex-none">
         <ul class="menu menu-horizontal px-1">
           {% if user.is_authenticated %}
-            <li><a href="{% url 'dashboard' %}">Dashboard</a></li>
+            <li><a href="{% url 'core:dashboard' %}">{% trans "Dashboard" %}</a></li>
             <li><a href="{% url 'iam:logout' %}">Logout</a></li>
           {% else %}
             <li><a href="{% url 'iam:login' %}">Login</a></li>

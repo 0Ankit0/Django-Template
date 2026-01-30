@@ -27,8 +27,8 @@ def is_active(context, url_name=None, namespace=None, part_match=None):
         
     if part_match:
         # Check if part_match string is in the current namespaces or url name
-        if part_match in resolver_match.url_name or \
-           (resolver_match.namespaces and part_match in resolver_match.namespaces):
+        if (resolver_match.url_name and part_match in resolver_match.url_name) or \
+           (resolver_match.namespaces and any(part_match in ns for ns in resolver_match.namespaces)):
             return 'active'
 
     return ''

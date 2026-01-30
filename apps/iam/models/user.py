@@ -2,6 +2,7 @@ from django.conf import settings
 from core.models.mixins import ImageWithThumbnailMixin
 from core.storage import UniqueFilePathGenerator
 from config.settings import DEFAULT_FILE_STORAGE
+from django.utils.module_loading import import_string
 import hashid_field
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Group, PermissionsMixin
 from django.db import models
@@ -96,10 +97,10 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 class UserAvatar(ImageWithThumbnailMixin, models.Model):
     original = models.ImageField(
-        storage=DEFAULT_FILE_STORAGE, upload_to=UniqueFilePathGenerator("avatars"), null=True
+        storage=import_string(DEFAULT_FILE_STORAGE)(), upload_to=UniqueFilePathGenerator("avatars"), null=True
     )
     thumbnail = models.ImageField(
-        storage=DEFAULT_FILE_STORAGE, upload_to=UniqueFilePathGenerator("avatars/thumbnails"), null=True
+        storage=import_string(DEFAULT_FILE_STORAGE)(), upload_to=UniqueFilePathGenerator("avatars/thumbnails"), null=True
     )
 
     THUMBNAIL_SIZE = (128, 128)

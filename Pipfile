@@ -39,7 +39,7 @@ psycopg2-binary = "*"                       # PostgreSQL adapter for Python
 whitenoise = "*"                            # WhiteNoise for serving static files in Django
 six = "*"                                   # Python 2/3 compatibility library used by social-auth-app-django
 openai = "*"                                # OpenAI integration for Django
-django-browser-reload = "*"
+django-browser-reload = "*"                 # Django auto browser reload for development
 
 [dev-packages]
 ruff = "*"                                  # Fast Python linter and formatter
