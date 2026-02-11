@@ -308,3 +308,63 @@ class RefundFactory(factory.django.DjangoModelFactory):
     currency = "usd"
     reason = enums.RefundReason.duplicate
     status = enums.RefundStatus.succeeded
+
+
+class PaymentTransactionFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.PaymentTransaction
+
+    id = factory.Faker("uuid4")
+    gateway = "khalti"
+    gateway_transaction_id = factory.Faker("uuid4")
+    amount = factory.Faker("pydecimal", left_digits=4, right_digits=2, positive=True)
+    currency = "NPR"
+    status = "pending"
+    payment_method = ""
+    customer_info = factory.LazyAttribute(
+        lambda obj: {
+            "customer_name": factory.Faker("name").generate(),
+            "customer_email": factory.Faker("email").generate(),
+            "customer_phone": factory.Faker("phone_number").generate(),
+        }
+    )
+    gateway_response = {}
+    tenant = factory.SubFactory(multitenancy_factories.TenantFactory)
+
+    class Params:
+        completed = factory.Trait(
+            status="completed",
+            payment_method="khalti",
+            gateway_response={
+                "status": "Completed",
+                "total_amount": 100000,
+                "fee": 1000,
+            },
+        )
+
+        failed = factory.Trait(
+            status="failed",
+            gateway_response={
+                "status": "Failed",
+                "error": "Payment failed",
+            },
+        )
+
+
+class WebhookEventFactory(factory.django.DjangoModelFactory):
+    class Meta:
+        model = models.WebhookEvent
+
+    id = factory.Faker("uuid4")
+    gateway = "khalti"
+    event_type = "payment.success"
+    payload = factory.LazyAttribute(
+        lambda obj: {
+            "event_type": obj.event_type,
+            "data": {
+                "pidx": factory.Faker("uuid4").generate(),
+            },
+        }
+    )
+    processed = False
+    error_message = ""
