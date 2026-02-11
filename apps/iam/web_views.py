@@ -23,28 +23,31 @@ class LoginView(FormView):
         return super().dispatch(request, *args, **kwargs)
     
     def form_valid(self, form):
-        username = form.cleaned_data.get('username')
-        password = form.cleaned_data.get('password')
         remember_me = form.cleaned_data.get('remember_me')
         
-        user = authenticate(self.request, username=username, password=password)
+        # AuthenticationForm already authenticated the user in its clean() method
+        # We can access the authenticated user via form.get_user()
+        user = form.get_user()
         
-        if user is not None:
-            # Check if user has OTP enabled
-            if getattr(user, 'otp_enabled', False):
-                self.request.session['otp_user_id'] = user.id
-                return redirect('iam:otp_verify')
-            
-            login(self.request, user)
-            
-            if not remember_me:
-                self.request.session.set_expiry(0)
-            
-            messages.success(self.request, 'Welcome back!')
-            return super().form_valid(form)
-        else:
-            messages.error(self.request, 'Invalid email or password.')
-            return self.form_invalid(form)
+        # Check if user has OTP enabled
+        if getattr(user, 'otp_enabled', False):
+            self.request.session['otp_user_id'] = user.id
+            return redirect('iam:otp_verify')
+        
+        # Log the user in
+        login(self.request, user)
+        
+        if not remember_me:
+            self.request.session.set_expiry(0)
+        
+        messages.success(self.request, 'Welcome back!')
+        return super().form_valid(form)
+    
+    def form_invalid(self, form):
+        # Add a user-friendly error message
+        messages.error(self.request, 'Invalid email or password.')
+        return super().form_invalid(form)
+
 
 
 class SignupView(FormView):

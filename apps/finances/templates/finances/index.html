@@ -57,91 +57,57 @@
 
 <!-- Available Plans -->
 <h2 class="text-2xl font-bold mt-8 mb-6">Available Plans</h2>
+<!-- Available Plans -->
+<h2 class="text-2xl font-bold mt-8 mb-6">Available Plans</h2>
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <!-- Free Plan -->
-    <div class="card bg-base-100 shadow-sm">
-        <div class="card-body">
-            <h3 class="card-title">Free</h3>
-            <p class="text-3xl font-bold">$0<span class="text-sm font-normal text-base-content/60">/month</span></p>
-            <ul class="mt-4 space-y-2">
-                <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
-                    1 Organization
-                </li>
-                <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
-                    5 Team Members
-                </li>
-                <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
-                    Basic Support
-                </li>
-            </ul>
-            <div class="card-actions mt-6">
-                <button class="btn btn-primary btn-block" disabled>Current Plan</button>
+    {% for plan in plans %}
+        {% for price in plan.prices.all %}
+        <div class="card shadow-sm {% if plan.name == 'Pro' %}bg-primary text-primary-content{% else %}bg-base-100{% endif %}">
+            <div class="card-body">
+                <div class="flex justify-between items-center">
+                    <h3 class="card-title">{{ plan.name }}</h3>
+                    {% if plan.name == 'Pro' %}
+                    <span class="badge badge-secondary">Popular</span>
+                    {% endif %}
+                </div>
+                <p class="text-3xl font-bold">
+                    {{ price.unit_amount_decimal|floatformat:0 }}
+                    <span class="text-sm font-normal opacity-80">/{{ price.currency|upper }}/{{ price.recurring.interval }}</span>
+                </p>
+                <p class="mt-2 opacity-80">{{ plan.description|default:"" }}</p>
+                
+                <ul class="mt-4 space-y-2">
+                    {% if plan.features %}
+                        {% for feature in plan.features %}
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                            {{ feature }}
+                        </li>
+                        {% endfor %}
+                    {% else %}
+                        <li class="flex items-center gap-2">
+                            <i data-lucide="check" class="w-4 h-4"></i>
+                            Standard Features
+                        </li>
+                    {% endif %}
+                </ul>
+
+                <div class="card-actions mt-6">
+                    {% if plan.name == 'Free' %}
+                        <button class="btn btn-ghost btn-block" disabled>Current Plan</button>
+                    {% else %}
+                        <a href="{% url 'finances:payment_methods' %}?plan={{ price.id }}" class="btn {% if plan.name == 'Pro' %}btn-secondary{% else %}btn-primary{% endif %} btn-block">
+                            Upgrade to {{ plan.name }}
+                        </a>
+                    {% endif %}
+                </div>
             </div>
         </div>
-    </div>
-    
-    <!-- Pro Plan -->
-    <div class="card bg-primary text-primary-content shadow-sm">
-        <div class="card-body">
-            <div class="flex justify-between items-center">
-                <h3 class="card-title">Pro</h3>
-                <span class="badge badge-secondary">Popular</span>
-            </div>
-            <p class="text-3xl font-bold">$29<span class="text-sm font-normal opacity-80">/month</span></p>
-            <ul class="mt-4 space-y-2">
-                <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4"></i>
-                    5 Organizations
-                </li>
-                <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4"></i>
-                    Unlimited Team Members
-                </li>
-                <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4"></i>
-                    Priority Support
-                </li>
-                <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4"></i>
-                    Advanced Analytics
-                </li>
-            </ul>
-            <div class="card-actions mt-6">
-                <button class="btn btn-secondary btn-block">Upgrade to Pro</button>
-            </div>
+        {% endfor %}
+    {% empty %}
+        <div class="col-span-3 text-center py-10">
+            <p class="text-base-content/60">No plans available at the moment.</p>
         </div>
-    </div>
-    
-    <!-- Enterprise Plan -->
-    <div class="card bg-base-100 shadow-sm">
-        <div class="card-body">
-            <h3 class="card-title">Enterprise</h3>
-            <p class="text-3xl font-bold">Custom</p>
-            <ul class="mt-4 space-y-2">
-                <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
-                    Unlimited Organizations
-                </li>
-                <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
-                    Unlimited Team Members
-                </li>
-                <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
-                    Dedicated Support
-                </li>
-                <li class="flex items-center gap-2">
-                    <i data-lucide="check" class="w-4 h-4 text-success"></i>
-                    Custom Integrations
-                </li>
-            </ul>
-            <div class="card-actions mt-6">
-                <button class="btn btn-outline btn-block">Contact Sales</button>
-            </div>
-        </div>
-    </div>
+    {% endfor %}
 </div>
 {% endblock %}

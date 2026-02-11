@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.views.generic.base import RedirectView
 from rest_framework import routers,urls
 from iam import views
 from core import views as core_views
@@ -44,6 +45,11 @@ urlpatterns = [
     path('test-403/', core_views.custom_403_view, name='test-403'),
     path('test-404/', core_views.custom_404_view, name='test-404'),
     path('test-500/', core_views.custom_500_view, name='test-500'),
+
+    # Favicon and app icons
+    path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.svg')),
+    path('apple-touch-icon.png', RedirectView.as_view(url='/static/images/favicon.svg')),
+    path('apple-touch-icon-precomposed.png', RedirectView.as_view(url='/static/images/favicon.svg')),
 ]
 
 

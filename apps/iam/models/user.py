@@ -10,30 +10,48 @@ from .groups import Group
 from .permissions import Permission
 
 class UserManager(BaseUserManager):
-    def create_user(self, email, password=None):
+    def create_user(self, email, password=None, username=None, **extra_fields):
         if not email:
             raise ValueError("Users must have an email address")
 
         normalized_email = self.normalize_email(email)
+        # Use email as username if username is not provided
+        if not username:
+            username = normalized_email
+            
         user = self.model(
             email=normalized_email,
+            username=username,
+            **extra_fields
         )
         user.set_password(password)
-        user_group = Group.objects.get(name=settings.DEFAULT_USER_GROUP)
+        user_group, _ = Group.objects.get_or_create(name=settings.DEFAULT_USER_GROUP)
         user.save(using=self._db)
 
         user.groups.add(user_group)
 
         UserProfile.objects.create(user=user)
 
+        from multitenancy.models.tenant_membership import TenantMembership
         TenantMembership.objects.associate_invitations_with_user(normalized_email, user)
 
         return user
 
-    def create_superuser(self, email, password):
+    def create_superuser(self, email=None, password=None, username=None, **extra_fields):
+        # If username is provided but not email, use username as email
+        if username and not email:
+            email = username
+        elif not email and not username:
+            raise ValueError("Email or username must be provided")
+            
+        # Set defaults for superuser
+        extra_fields.setdefault('is_superuser', True)
+        
         user = self.create_user(
-            email,
+            email=email,
             password=password,
+            username=username,
+            **extra_fields
         )
         user.is_superuser = True
         user.save(using=self._db)

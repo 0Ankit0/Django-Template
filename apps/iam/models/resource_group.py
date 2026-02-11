@@ -2,7 +2,7 @@
 
 import uuid
 
-from django.contrib.auth.models import Permission
+from .permissions import Permission
 from django.db import models
 
 from apps.core.models.base import BaseModel
