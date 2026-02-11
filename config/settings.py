@@ -250,6 +250,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTHENTICATION_BACKENDS = (
+    "iam.backends.EmailBackend",  # Custom backend for email authentication
     "social_core.backends.google.GoogleOAuth2",
     "social_core.backends.facebook.FacebookOAuth2",
     "django.contrib.auth.backends.ModelBackend",
@@ -375,6 +376,32 @@ if not STRIPE_CHECKS_ENABLED:
     SILENCED_SYSTEM_CHECKS.extend(["djstripe.C001", "djstripe.I001", "djstripe.I002"])
 
 STRIPE_ENABLED = '<CHANGE_ME>' not in STRIPE_LIVE_SECRET_KEY or '<CHANGE_ME>' not in STRIPE_TEST_SECRET_KEY
+
+# Khalti Payment Gateway Configuration
+KHALTI_ENABLED = env.bool("KHALTI_ENABLED", default=False)
+KHALTI_PUBLIC_KEY = env("KHALTI_PUBLIC_KEY", default="")
+KHALTI_SECRET_KEY = env("KHALTI_SECRET_KEY", default="")
+KHALTI_LIVE_MODE = env.bool("KHALTI_LIVE_MODE", default=False)
+
+# Payment Gateway Configuration
+PAYMENT_GATEWAYS = {
+    "stripe": {
+        "enabled": STRIPE_ENABLED,
+        "live_mode": STRIPE_LIVE_MODE,
+        "public_key": STRIPE_LIVE_SECRET_KEY if STRIPE_LIVE_MODE else STRIPE_TEST_SECRET_KEY,
+    },
+    "khalti": {
+        "enabled": KHALTI_ENABLED,
+        "public_key": KHALTI_PUBLIC_KEY,
+        "secret_key": KHALTI_SECRET_KEY,
+        "live_mode": KHALTI_LIVE_MODE,
+    },
+}
+
+# Auto-detect enabled gateways
+ENABLED_PAYMENT_GATEWAYS = [
+    name for name, config in PAYMENT_GATEWAYS.items() if config.get("enabled", False)
+]
 
 SUBSCRIPTION_TRIAL_PERIOD_DAYS = env("SUBSCRIPTION_TRIAL_PERIOD_DAYS", default=7)
 
