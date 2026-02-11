@@ -7,6 +7,19 @@
 <div class="max-w-2xl mx-auto">
     <div class="card bg-base-100 shadow-sm mb-6">
         <div class="card-body">
+            {% if selected_plan %}
+            <div class="alert alert-info mb-4">
+                <i data-lucide="info" class="w-6 h-6"></i>
+                <div>
+                    <h3 class="font-bold">Subscribe to {{ selected_product.name }}</h3>
+                    <div class="text-xs">
+                        You are setting up payment for <strong>{{ selected_plan.nickname|default:selected_plan.recurring.interval|title }}</strong> plan 
+                        ({{ selected_plan.unit_amount_decimal|floatformat:2 }} {{ selected_plan.currency|upper }}/{{ selected_plan.recurring.interval }}).
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
             <h2 class="card-title mb-4">Your Payment Methods</h2>
             
             <div class="text-center py-8">
