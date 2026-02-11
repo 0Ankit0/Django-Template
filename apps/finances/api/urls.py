@@ -2,6 +2,7 @@ from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 from finances import views as api_views
 from . import admin_refund as views_admin
+from ..urls_payments import urlpatterns as payment_urls
 
 app_name = 'finances_api'
 
@@ -24,4 +25,5 @@ urlpatterns = [
     path("stripe/", include(stripe_urls)),
     path("", include(router.urls)),
     path("", include(admin_urls)),
+    path("", include(payment_urls)),  # Include payment gateway URLs
 ]
