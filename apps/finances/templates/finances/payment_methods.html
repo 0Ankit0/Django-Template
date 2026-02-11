@@ -31,41 +31,102 @@
     
     <div class="card bg-base-100 shadow-sm">
         <div class="card-body">
-            <h2 class="card-title mb-4">Add Payment Method</h2>
+            <!-- Payment Gateway Selection -->
+            <div id="payment-gateways" class="space-y-4">
+                {% for gateway_id, gateway_config in payment_gateways.items %}
+                    {% if gateway_config.enabled %}
+                        {% if gateway_id == 'khalti' %}
+                        <button onclick="initiatePayment('khalti')" class="btn btn-outline btn-block h-auto py-3 flex flex-col items-center gap-2 hover:bg-purple-50 hover:border-purple-500 hover:text-purple-700">
+                            <span class="font-bold text-lg">Pay with Khalti</span>
+                            <span class="text-xs opacity-70">Digital Wallet / Mobile Banking</span>
+                        </button>
+                        {% elif gateway_id == 'stripe' %}
+                        <button onclick="initiatePayment('stripe')" class="btn btn-outline btn-block h-auto py-3 flex flex-col items-center gap-2 hover:bg-blue-50 hover:border-blue-500 hover:text-blue-700">
+                            <span class="font-bold text-lg">Pay with Card</span>
+                            <span class="text-xs opacity-70">Credit / Debit Card (Stripe)</span>
+                        </button>
+                        {% endif %}
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <div id="payment-loading" class="hidden text-center py-8">
+                <span class="loading loading-spinner loading-lg text-primary"></span>
+                <p class="mt-4 text-base-content/60">Processing your request...</p>
+            </div>
             
-            <form class="space-y-4">
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text">Card Number</span>
-                    </label>
-                    <input type="text" placeholder="4242 4242 4242 4242" class="input input-bordered w-full" />
-                </div>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text">Expiry Date</span>
-                        </label>
-                        <input type="text" placeholder="MM/YY" class="input input-bordered w-full" />
-                    </div>
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text">CVC</span>
-                        </label>
-                        <input type="text" placeholder="123" class="input input-bordered w-full" />
-                    </div>
-                </div>
-                
-                <button type="submit" class="btn btn-primary btn-block">Add Card</button>
-            </form>
-            
-            <div class="divider">OR</div>
-            
-            <button class="btn btn-outline btn-block">
-                <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24"><path fill="currentColor" d="M20.067 8.478c.492.88.556 2.014.3 3.327-.74 3.806-3.276 5.12-6.514 5.12h-.5a.805.805 0 0 0-.794.68l-.04.22-.63 4.073-.024.13a.804.804 0 0 1-.794.68h-2.52c-.381 0-.698-.31-.65-.69l.77-4.92.03-.16c.042-.24.25-.41.49-.41h1.07c3.12 0 5.56-1.26 6.27-4.91.24-1.24.15-2.27-.33-2.99-.12-.18-.25-.34-.4-.48l.26.33z"/></svg>
-                Pay with PayPal
-            </button>
+            <div id="payment-error" class="hidden alert alert-error mt-4">
+                <i data-lucide="alert-circle" class="w-6 h-6"></i>
+                <span id="error-message"></span>
+            </div>
         </div>
     </div>
 </div>
-{% endblock %}
+
+<script>
+async function initiatePayment(gateway) {
+    const loadingEl = document.getElementById('payment-loading');
+    const gatewaysEl = document.getElementById('payment-gateways');
+    const errorEl = document.getElementById('payment-error');
+    const errorMsgEl = document.getElementById('error-message');
+    
+    // Reset UI
+    loadingEl.classList.remove('hidden');
+    gatewaysEl.classList.add('hidden');
+    errorEl.classList.add('hidden');
+    
+    try {
+        const response = await fetch('/api/finances/payments/initiate/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                gateway: gateway,
+                amount: '{{ selected_plan.unit_amount_decimal|default:"1000" }}', // Use plan amount or default
+                currency: '{{ selected_plan.currency|default:"NPR"|upper }}',
+                purchase_order_id: '{{ selected_plan.id|default:"test_ref" }}',
+                purchase_order_name: 'Subscription to {{ selected_product.name|default:"Test Plan" }}',
+                return_url: window.location.origin + "{% url 'finances:subscription' %}",
+                // Customer info will be populated by backend from request.user
+            })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.message || 'Payment initiation failed');
+        }
+
+        if (data.payment_url) {
+            window.location.href = data.payment_url;
+        } else {
+            throw new Error('No payment URL returned');
+        }
+        
+    } catch (error) {
+        console.error('Payment error:', error);
+        loadingEl.classList.add('hidden');
+        gatewaysEl.classList.remove('hidden');
+        errorMsgEl.textContent = error.message;
+        errorEl.classList.remove('hidden');
+    }
+}
+
+// Helper to get CSRF token
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+</script>

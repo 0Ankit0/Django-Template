@@ -3,6 +3,7 @@ from rest_framework import status, viewsets
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView
+from django.conf import settings
 from . import models as finance_models # Adjusting import to match frontend usage if needed
 
 from rest_framework.decorators import action
@@ -100,9 +101,33 @@ class PaymentMethodsView(LoginRequiredMixin, TemplateView):
     template_name = 'finances/payment_methods.html'
     login_url = reverse_lazy('iam:login')
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        
+        # Get enabled gateways from settings
+        context['payment_gateways'] = settings.PAYMENT_GATEWAYS
+        
+        plan_id = self.request.GET.get('plan')
+        if plan_id:
+            try:
+                price = djstripe_models.Price.objects.get(id=plan_id)
+                context['selected_plan'] = price
+                context['selected_product'] = price.product
+            except djstripe_models.Price.DoesNotExist:
+                pass
+        return context
+
 
 class SubscriptionView(LoginRequiredMixin, TemplateView):
     """Subscription management."""
     template_name = 'finances/subscription.html'
     login_url = reverse_lazy('iam:login')
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        # Fetch active products with their prices
+        context['plans'] = djstripe_models.Product.objects.filter(
+            active=True
+        ).prefetch_related('prices')
+        return context
 
