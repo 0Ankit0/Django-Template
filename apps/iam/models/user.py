@@ -1,13 +1,13 @@
-from django.conf import settings
+import hashid_field
 from core.models.mixins import ImageWithThumbnailMixin
 from core.storage import UniqueFilePathGenerator
-from config.settings import DEFAULT_FILE_STORAGE
-from django.utils.module_loading import import_string
-import hashid_field
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, Group, PermissionsMixin
 from django.db import models
-from .groups import Group
-from .permissions import Permission
+from django.utils.module_loading import import_string
+
+from config.settings import DEFAULT_FILE_STORAGE
+
 
 class UserManager(BaseUserManager):
     def create_user(self, email, password=None, username=None, **extra_fields):
@@ -18,12 +18,8 @@ class UserManager(BaseUserManager):
         # Use email as username if username is not provided
         if not username:
             username = normalized_email
-            
-        user = self.model(
-            email=normalized_email,
-            username=username,
-            **extra_fields
-        )
+
+        user = self.model(email=normalized_email, username=username, **extra_fields)
         user.set_password(password)
         user_group, _ = Group.objects.get_or_create(name=settings.DEFAULT_USER_GROUP)
         user.save(using=self._db)
@@ -33,6 +29,7 @@ class UserManager(BaseUserManager):
         UserProfile.objects.create(user=user)
 
         from multitenancy.models.tenant_membership import TenantMembership
+
         TenantMembership.objects.associate_invitations_with_user(normalized_email, user)
 
         return user
@@ -43,16 +40,11 @@ class UserManager(BaseUserManager):
             email = username
         elif not email and not username:
             raise ValueError("Email or username must be provided")
-            
+
         # Set defaults for superuser
-        extra_fields.setdefault('is_superuser', True)
-        
-        user = self.create_user(
-            email=email,
-            password=password,
-            username=username,
-            **extra_fields
-        )
+        extra_fields.setdefault("is_superuser", True)
+
+        user = self.create_user(email=email, password=password, username=username, **extra_fields)
         user.is_superuser = True
         user.save(using=self._db)
 
@@ -82,18 +74,18 @@ class User(AbstractBaseUser, PermissionsMixin):
     otp_auth_url = models.CharField(max_length=255, blank=True, default="")
 
     groups = models.ManyToManyField(
-        'iam.Group',
-        verbose_name='groups',
+        "iam.Group",
+        verbose_name="groups",
         blank=True,
-        help_text='The groups this user belongs to.',
+        help_text="The groups this user belongs to.",
         related_name="user_set",
         related_query_name="user",
     )
     user_permissions = models.ManyToManyField(
-        'iam.Permission',
-        verbose_name='user permissions',
+        "iam.Permission",
+        verbose_name="user permissions",
         blank=True,
-        help_text='Specific permissions for this user.',
+        help_text="Specific permissions for this user.",
         related_name="user_set",
         related_query_name="user",
     )
@@ -118,7 +110,9 @@ class UserAvatar(ImageWithThumbnailMixin, models.Model):
         storage=import_string(DEFAULT_FILE_STORAGE)(), upload_to=UniqueFilePathGenerator("avatars"), null=True
     )
     thumbnail = models.ImageField(
-        storage=import_string(DEFAULT_FILE_STORAGE)(), upload_to=UniqueFilePathGenerator("avatars/thumbnails"), null=True
+        storage=import_string(DEFAULT_FILE_STORAGE)(),
+        upload_to=UniqueFilePathGenerator("avatars/thumbnails"),
+        null=True,
     )
 
     THUMBNAIL_SIZE = (128, 128)
@@ -139,4 +133,3 @@ class UserProfile(models.Model):
     def __str__(self) -> str:
         full_name = f"{self.first_name} {self.last_name}".strip()
         return full_name if full_name else self.user.email
-

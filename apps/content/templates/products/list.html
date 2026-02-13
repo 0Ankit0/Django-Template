@@ -27,7 +27,7 @@
             </h2>
             <p class="text-base-content/70">{{ product.fields.description|truncatechars:100 }}</p>
             <div class="card-actions justify-end mt-4">
-                <button class="btn btn-primary btn-sm">Buy Now</button>
+                <a href="{% url 'finances:payment_methods' %}?product_id={{ product.id }}" class="btn btn-primary btn-sm">Buy Now</a>
             </div>
         </div>
     </div>

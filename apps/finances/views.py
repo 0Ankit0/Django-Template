@@ -1,16 +1,16 @@
-from djstripe import models as djstripe_models
-from rest_framework import status, viewsets
+from django.conf import settings
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from django.views.generic import TemplateView
-from django.conf import settings
-from . import models as finance_models # Adjusting import to match frontend usage if needed
-
+from django.views.generic.edit import FormView
+from djstripe import models as djstripe_models
+from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from . import serializers
+from .forms import PlanCreationForm
 
 
 class PaymentIntentViewSet(viewsets.ModelViewSet):
@@ -82,52 +82,100 @@ class SubscriptionScheduleViewSet(viewsets.ModelViewSet):
 
 class FinancesView(LoginRequiredMixin, TemplateView):
     """Finances overview."""
-    template_name = 'finances/index.html'
-    login_url = reverse_lazy('iam:login')
-    
+
+    template_name = "finances/index.html"
+    login_url = reverse_lazy("iam:login")
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
+
         # Get available plans
-        context['plans'] = djstripe_models.Product.objects.filter(
-            active=True
-        ).prefetch_related('prices')
-        
+        context["plans"] = djstripe_models.Product.objects.filter(active=True).prefetch_related("prices")
+
         return context
 
 
 class PaymentMethodsView(LoginRequiredMixin, TemplateView):
     """Manage payment methods."""
-    template_name = 'finances/payment_methods.html'
-    login_url = reverse_lazy('iam:login')
+
+    template_name = "finances/payment_methods.html"
+    login_url = reverse_lazy("iam:login")
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
+
         # Get enabled gateways from settings
-        context['payment_gateways'] = settings.PAYMENT_GATEWAYS
-        
-        plan_id = self.request.GET.get('plan')
+        context["payment_gateways"] = settings.PAYMENT_GATEWAYS
+
+        # Check if this is a plan subscription
+        plan_id = self.request.GET.get("plan")
         if plan_id:
             try:
                 price = djstripe_models.Price.objects.get(id=plan_id)
-                context['selected_plan'] = price
-                context['selected_product'] = price.product
+                context["selected_plan"] = price
+                context["selected_product"] = price.product
             except djstripe_models.Price.DoesNotExist:
                 pass
+
+        # Check if this is a product purchase
+        product_id = self.request.GET.get("product_id")
+
+        if product_id:
+            try:
+                from content.models import ContentItem
+
+                try:
+                    content_item = ContentItem.objects.get(pk=product_id)
+
+                    context["is_product_purchase"] = True
+                    context["product_purchase"] = {
+                        "id": str(content_item.pk),  # HashID to string
+                        "name": content_item.fields.get("title", "Product"),
+                        "amount": content_item.fields.get("price", 0),
+                        "currency": "NPR",  # Default currency for products
+                    }
+                except ContentItem.DoesNotExist:
+                    pass
+            except ImportError:
+                pass
+
+        # Get saved payment methods
+        context["payment_methods"] = []
+        if getattr(self.request, "tenant", None):
+            customer, _ = djstripe_models.Customer.get_or_create(self.request.tenant)
+            context["payment_methods"] = djstripe_models.PaymentMethod.objects.filter(
+                customer=customer, type="card"
+            ).order_by("-created")
+        context["stripe_public_key"] = (
+            settings.STRIPE_LIVE_PUBLIC_KEY if settings.STRIPE_LIVE_MODE else settings.STRIPE_TEST_PUBLIC_KEY
+        )
+
         return context
 
 
 class SubscriptionView(LoginRequiredMixin, TemplateView):
     """Subscription management."""
-    template_name = 'finances/subscription.html'
-    login_url = reverse_lazy('iam:login')
-    
+
+    template_name = "finances/subscription.html"
+    login_url = reverse_lazy("iam:login")
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         # Fetch active products with their prices
-        context['plans'] = djstripe_models.Product.objects.filter(
-            active=True
-        ).prefetch_related('prices')
+        context["plans"] = djstripe_models.Product.objects.filter(active=True).prefetch_related("prices")
         return context
 
+
+class AddPlanView(LoginRequiredMixin, FormView):
+    template_name = "finances/add_plan.html"
+    form_class = PlanCreationForm
+    success_url = reverse_lazy("finances:index")
+    login_url = reverse_lazy("iam:login")
+
+    def form_valid(self, form):
+        try:
+            form.save()
+            return super().form_valid(form)
+        except Exception as e:
+            form.add_error(None, str(e))
+            return self.form_invalid(form)

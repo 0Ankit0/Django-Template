@@ -10,15 +10,16 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-from pathlib import Path
-import os
-import importlib
-import environ
 import datetime
+import importlib
+import json
+import os
 import sys
+from pathlib import Path
+
+import environ
+
 from . import monitoring
-
-
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -75,23 +76,22 @@ THIRD_PARTY_APPS = [
 
 # Auto Discover apps in the project
 LOCAL_APPS = []
-APPS_DIR = os.path.join(BASE_DIR, 'apps')
-sys.path.append(APPS_DIR) # Ensure apps directory is in the path
+APPS_DIR = os.path.join(BASE_DIR, "apps")
+sys.path.append(APPS_DIR)  # Ensure apps directory is in the path
 for app_name in os.listdir(APPS_DIR):
     app_path = os.path.join(APPS_DIR, app_name)
-    if os.path.isdir(app_path) and os.path.isfile(os.path.join(app_path, '__init__.py')):
+    if os.path.isdir(app_path) and os.path.isfile(os.path.join(app_path, "__init__.py")):
         try:
             importlib.import_module(app_name)
             LOCAL_APPS.append(app_name)
         except ImportError as e:
-            print(f"Could not import app {app_name}: {e}") 
+            print(f"Could not import app {app_name}: {e}")
 
 INSTALLED_APPS = [
     *LOCAL_APPS,
     *DJANGO_CORE_APPS,
-    *THIRD_PARTY_APPS,    
+    *THIRD_PARTY_APPS,
 ]
-
 
 
 MIDDLEWARE = [
@@ -117,18 +117,18 @@ MIDDLEWARE = [
 ROOT_URLCONF = "config.urls"
 ROOT_HOSTCONF = "config.hosts"
 DEFAULT_HOST = "api"
-PARENT_HOST = env('PARENT_HOST', default="")
+PARENT_HOST = env("PARENT_HOST", default="")
 
 TEMPLATES = [
     {
-        'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
-        'OPTIONS': {
-            'context_processors': [
-                'django.template.context_processors.request',
-                'django.contrib.auth.context_processors.auth',
-                'django.contrib.messages.context_processors.messages',
+        "BACKEND": "django.template.backends.django.DjangoTemplates",
+        "DIRS": [],
+        "APP_DIRS": True,
+        "OPTIONS": {
+            "context_processors": [
+                "django.template.context_processors.request",
+                "django.contrib.auth.context_processors.auth",
+                "django.contrib.messages.context_processors.messages",
             ],
         },
     },
@@ -136,32 +136,32 @@ TEMPLATES = [
 PASSWORD_HASHERS = env.list(
     "DJANGO_PASSWORD_HASHERS",
     default=[
-        'django.contrib.auth.hashers.PBKDF2PasswordHasher',
-        'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
-        'django.contrib.auth.hashers.Argon2PasswordHasher',
-        'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+        "django.contrib.auth.hashers.PBKDF2PasswordHasher",
+        "django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher",
+        "django.contrib.auth.hashers.Argon2PasswordHasher",
+        "django.contrib.auth.hashers.BCryptSHA256PasswordHasher",
     ],
 )
 
-WSGI_APPLICATION = 'config.wsgi.application'
+WSGI_APPLICATION = "config.wsgi.application"
 
 LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
         },
     },
-    'root': {
-        'handlers': ['console'],
-        'level': env('DJANGO_LOG_LEVEL', default='INFO'),
+    "root": {
+        "handlers": ["console"],
+        "level": env("DJANGO_LOG_LEVEL", default="INFO"),
     },
-    'loggers': {
-        '*': {
-            'handlers': ['console'],
-            'level': env('DJANGO_LOG_LEVEL', default='INFO'),
-            'propagate': False,
+    "loggers": {
+        "*": {
+            "handlers": ["console"],
+            "level": env("DJANGO_LOG_LEVEL", default="INFO"),
+            "propagate": False,
         },
     },
 }
@@ -178,14 +178,14 @@ if IS_LOCAL_DEBUG:
             "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
         }
     }
-    
+
     # Use in-memory channel layer for local development
     CHANNEL_LAYERS = {
         "default": {
             "BACKEND": "channels.layers.InMemoryChannelLayer",
         },
     }
-    
+
     # Use local memory cache for local development
     CACHES = {
         "default": {
@@ -193,7 +193,7 @@ if IS_LOCAL_DEBUG:
             "LOCATION": "unique-snowflake",
         }
     }
-    
+
     REDIS_CONNECTION = None
 else:
     # Use PostgreSQL for production
@@ -236,16 +236,16 @@ else:
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+        "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
     },
     {
-        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+        "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
 ]
 
@@ -257,7 +257,7 @@ AUTHENTICATION_BACKENDS = (
 )
 
 # Add custom user model as the default user model
-AUTH_USER_MODEL = 'iam.User'
+AUTH_USER_MODEL = "iam.User"
 # OR if you have imported the model
 # from user_management.models import User
 # AUTH_USER_MODEL = User
@@ -265,16 +265,16 @@ AUTH_USER_MODEL = 'iam.User'
 # Internationalization
 # https://docs.djangoproject.com/en/6.0/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = "en-us"
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = "UTC"
 
 USE_I18N = True
 
 USE_TZ = True
 
 LOCALE_PATHS = [
-    BASE_DIR / 'locale',
+    BASE_DIR / "locale",
 ]
 
 # Auth URLs
@@ -293,8 +293,8 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_THROTTLE_RATES": {"anon": "100/day"},
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10,
+    "DEFAULT_PAGINATION_CLASS": "rest_framework.pagination.PageNumberPagination",
+    "PAGE_SIZE": 10,
 }
 
 SIMPLE_JWT = {
@@ -338,7 +338,7 @@ SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {
 }
 SOCIAL_AUTH_LOGIN_ERROR_URL = "/"
 SOCIAL_AUTH_FIELDS_STORED_IN_SESSION = ["locale"]
-SOCIAL_AUTH_URL_NAMESPACE = 'iam_api:social'
+SOCIAL_AUTH_URL_NAMESPACE = "iam_api:social"
 
 SWAGGER_SETTINGS = {
     "DEFAULT_INFO": "config.urls_api.api_info",
@@ -359,6 +359,8 @@ LAMBDA_TASKS_LOCAL_URL = env("LAMBDA_TASKS_LOCAL_URL", default=None)
 
 STRIPE_LIVE_SECRET_KEY = env("STRIPE_LIVE_SECRET_KEY", default="sk_<CHANGE_ME>")
 STRIPE_TEST_SECRET_KEY = env("STRIPE_TEST_SECRET_KEY", default="sk_test_<CHANGE_ME>")
+STRIPE_LIVE_PUBLIC_KEY = env("STRIPE_LIVE_PUBLIC_KEY", default="pk_<CHANGE_ME>")
+STRIPE_TEST_PUBLIC_KEY = env("STRIPE_TEST_PUBLIC_KEY", default="pk_test_<CHANGE_ME>")
 STRIPE_LIVE_MODE = env.bool("STRIPE_LIVE_MODE", default=False)
 DJSTRIPE_WEBHOOK_SECRET = env("DJSTRIPE_WEBHOOK_SECRET", default="")
 DJSTRIPE_FOREIGN_KEY_TO_FIELD = "id"
@@ -372,13 +374,14 @@ DJSTRIPE_SUBSCRIBER_MODEL_REQUEST_CALLBACK = tenant_request_callback
 DJSTRIPE_SUBSCRIBER_MODEL = "multitenancy.Tenant"
 # Disable stripe checks for keys on django application start
 STRIPE_CHECKS_ENABLED = env.bool("STRIPE_CHECKS_ENABLED", default=True)
+SILENCED_SYSTEM_CHECKS = []
 if not STRIPE_CHECKS_ENABLED:
     SILENCED_SYSTEM_CHECKS.extend(["djstripe.C001", "djstripe.I001", "djstripe.I002"])
 
-STRIPE_ENABLED = '<CHANGE_ME>' not in STRIPE_LIVE_SECRET_KEY or '<CHANGE_ME>' not in STRIPE_TEST_SECRET_KEY
+STRIPE_ENABLED = "<CHANGE_ME>" not in STRIPE_LIVE_SECRET_KEY or "<CHANGE_ME>" not in STRIPE_TEST_SECRET_KEY
 
 # Khalti Payment Gateway Configuration
-KHALTI_ENABLED = env.bool("KHALTI_ENABLED", default=False)
+KHALTI_ENABLED = env.bool("KHALTI_ENABLED", default=True)
 KHALTI_PUBLIC_KEY = env("KHALTI_PUBLIC_KEY", default="")
 KHALTI_SECRET_KEY = env("KHALTI_SECRET_KEY", default="")
 KHALTI_LIVE_MODE = env.bool("KHALTI_LIVE_MODE", default=False)
@@ -386,22 +389,27 @@ KHALTI_LIVE_MODE = env.bool("KHALTI_LIVE_MODE", default=False)
 # Payment Gateway Configuration
 PAYMENT_GATEWAYS = {
     "stripe": {
+        "name": "Stripe",
         "enabled": STRIPE_ENABLED,
         "live_mode": STRIPE_LIVE_MODE,
-        "public_key": STRIPE_LIVE_SECRET_KEY if STRIPE_LIVE_MODE else STRIPE_TEST_SECRET_KEY,
+        "public_key": STRIPE_LIVE_PUBLIC_KEY if STRIPE_LIVE_MODE else STRIPE_TEST_PUBLIC_KEY,
     },
     "khalti": {
+        "name": "Khalti",
         "enabled": KHALTI_ENABLED,
-        "public_key": KHALTI_PUBLIC_KEY,
-        "secret_key": KHALTI_SECRET_KEY,
+        "public_key": KHALTI_PUBLIC_KEY
+        or "test_public_key_dc74e0fd57cb46cd93832aee0a390234",  # Common test public key found in tutorials
+        "secret_key": KHALTI_SECRET_KEY
+        if KHALTI_SECRET_KEY and KHALTI_SECRET_KEY != "<CHANGE_ME>"
+        else "05bf95cc57244045b8df5fad06748dab"
+        if DEBUG
+        else "",
         "live_mode": KHALTI_LIVE_MODE,
     },
 }
 
 # Auto-detect enabled gateways
-ENABLED_PAYMENT_GATEWAYS = [
-    name for name, config in PAYMENT_GATEWAYS.items() if config.get("enabled", False)
-]
+ENABLED_PAYMENT_GATEWAYS = [name for name, config in PAYMENT_GATEWAYS.items() if config.get("enabled", False)]
 
 SUBSCRIPTION_TRIAL_PERIOD_DAYS = env("SUBSCRIPTION_TRIAL_PERIOD_DAYS", default=7)
 
@@ -414,8 +422,8 @@ AWS_EXPORTS_STORAGE_BUCKET_NAME = env("AWS_EXPORTS_STORAGE_BUCKET_NAME", default
 AWS_S3_ENDPOINT_URL = AWS_ENDPOINT_URL
 AWS_S3_CUSTOM_DOMAIN = env("AWS_S3_CUSTOM_DOMAIN", default=None)
 AWS_QUERYSTRING_EXPIRE = env("AWS_QUERYSTRING_EXPIRE", default=60 * 60 * 24)
-AWS_CLOUDFRONT_KEY = os.environ.get('AWS_CLOUDFRONT_KEY', '').encode('ascii')
-AWS_CLOUDFRONT_KEY_ID = os.environ.get('AWS_CLOUDFRONT_KEY_ID', None)
+AWS_CLOUDFRONT_KEY = os.environ.get("AWS_CLOUDFRONT_KEY", "").encode("ascii")
+AWS_CLOUDFRONT_KEY_ID = os.environ.get("AWS_CLOUDFRONT_KEY_ID", None)
 USER_DATA_EXPORT_EXPIRY_SECONDS = env.int("USER_DATA_EXPORT_EXPIRY_SECONDS", 172800)  # 2 days default
 
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
@@ -424,8 +432,8 @@ CSRF_TRUSTED_ORIGINS = env("CSRF_TRUSTED_ORIGINS", default=[])
 RATELIMIT_IP_META_KEY = "core.utils.get_client_ip"
 
 OTP_AUTH_ISSUER_NAME = env("OTP_AUTH_ISSUER_NAME", default="")
-OTP_AUTH_TOKEN_COOKIE = 'otp_auth_token'
-OTP_AUTH_TOKEN_LIFETIME_MINUTES = datetime.timedelta(minutes=env.int('OTP_AUTH_TOKEN_LIFETIME_MINUTES', default=5))
+OTP_AUTH_TOKEN_COOKIE = "otp_auth_token"
+OTP_AUTH_TOKEN_LIFETIME_MINUTES = datetime.timedelta(minutes=env.int("OTP_AUTH_TOKEN_LIFETIME_MINUTES", default=5))
 OTP_VALIDATE_PATH = "/auth/validate-otp"
 
 OPENAI_API_KEY = env("OPENAI_API_KEY", default="")
@@ -436,20 +444,20 @@ USER_DOCUMENTS_NUMBER_LIMIT = env.int("USER_DOCUMENTS_NUMBER_LIMIT", default=10)
 TENANT_INVITATION_TIMEOUT = env("TENANT_INVITATION_TIMEOUT", default=60 * 60 * 24 * 14)
 
 # Celery Configuration
-CELERY_RESULT_BACKEND = 'django-db'
+CELERY_RESULT_BACKEND = "django-db"
 if IS_LOCAL_DEBUG:
     # Use synchronous task execution for local development (no broker needed)
     CELERY_TASK_ALWAYS_EAGER = True
     CELERY_TASK_EAGER_PROPAGATES = True
-    CELERY_BROKER_URL = 'memory://'
+    CELERY_BROKER_URL = "memory://"
     # Print emails to console for local development
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
 else:
     CELERY_BROKER_URL = f'{env("REDIS_CONNECTION")}/0'
     EMAIL_BACKEND = env("EMAIL_BACKEND", default="django_ses.SESBackend")
 
 CELERY_BROKER_TRANSPORT_OPTIONS = {
-    'visibility_timeout': 3600,
+    "visibility_timeout": 3600,
 }
 
 
@@ -472,14 +480,14 @@ else:
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'static')
+STATIC_URL = "static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
 
 # Custom error handlers
-handler400 = 'core.views.custom_400_view'
-handler403 = 'core.views.custom_403_view'
-handler404 = 'core.views.custom_404_view'
-handler500 = 'core.views.custom_500_view'
+handler400 = "core.views.custom_400_view"
+handler403 = "core.views.custom_403_view"
+handler404 = "core.views.custom_404_view"
+handler500 = "core.views.custom_500_view"
 
 AWS_SES_REGION_NAME = env("AWS_SES_REGION_NAME", default=AWS_REGION)
 
@@ -487,11 +495,10 @@ AWS_SES_REGION_NAME = env("AWS_SES_REGION_NAME", default=AWS_REGION)
 USE_SES_V2 = True
 
 # Django Tailwind Configuration
-TAILWIND_APP_NAME = 'theme'
+TAILWIND_APP_NAME = "theme"
 INTERNAL_IPS = [
     "127.0.0.1",
 ]
 
 # NPM executable path (for django-tailwind)
 NPM_BIN_PATH = env("NPM_BIN_PATH", default="/usr/local/bin/npm")
-

@@ -14,42 +14,36 @@ Including another URLconf
     1. Import the include() function: from django.urls import include, path
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
-from django.contrib import admin
-from django.urls import path, include
-from django.views.generic.base import RedirectView
-from rest_framework import routers,urls
-from iam import views
 from core import views as core_views
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import include, path
+from django.views.generic.base import RedirectView
 
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    
+    path("admin/", admin.site.urls),
     # App URLs
-    path('', include('core.urls')),
-    path('', include('iam.urls')),
-    path('', include('multitenancy.urls')),
-    path('', include('finances.urls')),
-    path('', include('notifications.urls')),
-    path('', include('content.urls')),
-    path('', include('integrations.urls')),
+    path("", include("core.urls")),
+    path("", include("iam.urls")),
+    path("", include("multitenancy.urls")),
+    path("", include("finances.urls")),
+    path("", include("notifications.urls")),
+    path("", include("content.urls")),
+    path("", include("integrations.urls")),
     # API URLs
-    path('', include('config.urls_api')),
-
+    path("", include("config.urls_api")),
     # i18n
     path("i18n/", include("django.conf.urls.i18n")),
-
     # Test URLs for error pages
-    path('test-400/', core_views.custom_400_view, name='test-400'),
-    path('test-403/', core_views.custom_403_view, name='test-403'),
-    path('test-404/', core_views.custom_404_view, name='test-404'),
-    path('test-500/', core_views.custom_500_view, name='test-500'),
-
+    path("test-400/", core_views.custom_400_view, name="test-400"),
+    path("test-403/", core_views.custom_403_view, name="test-403"),
+    path("test-404/", core_views.custom_404_view, name="test-404"),
+    path("test-500/", core_views.custom_500_view, name="test-500"),
     # Favicon and app icons
-    path('favicon.ico', RedirectView.as_view(url='/static/images/favicon.svg')),
-    path('apple-touch-icon.png', RedirectView.as_view(url='/static/images/favicon.svg')),
-    path('apple-touch-icon-precomposed.png', RedirectView.as_view(url='/static/images/favicon.svg')),
+    path("favicon.ico", RedirectView.as_view(url="/static/images/favicon.svg")),
+    path("apple-touch-icon.png", RedirectView.as_view(url="/static/images/favicon.svg")),
+    path("apple-touch-icon-precomposed.png", RedirectView.as_view(url="/static/images/favicon.svg")),
 ]
 
 

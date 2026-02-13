@@ -31,7 +31,7 @@
                 <h3 class="card-title">Payment Methods</h3>
                 <a href="{% url 'finances:payment_methods' %}" class="btn btn-ghost btn-sm">Manage</a>
             </div>
-            
+
             <div class="text-center py-8">
                 <i data-lucide="credit-card" class="w-12 h-12 mx-auto text-base-content/30 mb-4"></i>
                 <p class="text-base-content/60">No payment methods added</p>
@@ -41,12 +41,12 @@
             </div>
         </div>
     </div>
-    
+
     <!-- Billing History -->
     <div class="card bg-base-100 shadow-sm">
         <div class="card-body">
             <h3 class="card-title mb-4">Billing History</h3>
-            
+
             <div class="text-center py-8">
                 <i data-lucide="receipt" class="w-12 h-12 mx-auto text-base-content/30 mb-4"></i>
                 <p class="text-base-content/60">No billing history</p>
@@ -56,9 +56,15 @@
 </div>
 
 <!-- Available Plans -->
-<h2 class="text-2xl font-bold mt-8 mb-6">Available Plans</h2>
-<!-- Available Plans -->
-<h2 class="text-2xl font-bold mt-8 mb-6">Available Plans</h2>
+<div class="flex justify-between items-center mt-8 mb-6">
+    <h2 class="text-2xl font-bold">Available Plans</h2>
+    {% if user.is_staff %}
+    <a href="{% url 'finances:add_plan' %}" class="btn btn-sm btn-outline">
+        <i data-lucide="plus" class="w-4 h-4"></i>
+        Add Plan
+    </a>
+    {% endif %}
+</div>
 <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
     {% for plan in plans %}
         {% for price in plan.prices.all %}
@@ -75,7 +81,7 @@
                     <span class="text-sm font-normal opacity-80">/{{ price.currency|upper }}/{{ price.recurring.interval }}</span>
                 </p>
                 <p class="mt-2 opacity-80">{{ plan.description|default:"" }}</p>
-                
+
                 <ul class="mt-4 space-y-2">
                     {% if plan.features %}
                         {% for feature in plan.features %}

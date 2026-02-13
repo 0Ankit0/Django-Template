@@ -4,130 +4,374 @@
 {% block page_title %}Payment Methods{% endblock %}
 
 {% block content %}
-<div class="max-w-2xl mx-auto">
-    <div class="card bg-base-100 shadow-sm mb-6">
+
+<div class="max-w-3xl mx-auto py-8">
+    <!-- Order Summary Card -->
+    {% if selected_plan or is_product_purchase %}
+    <div class="card bg-base-100 shadow-xl mb-8 border border-base-200">
         <div class="card-body">
-            {% if selected_plan %}
-            <div class="alert alert-info mb-4">
-                <i data-lucide="info" class="w-6 h-6"></i>
+            <h2 class="card-title text-2xl mb-4 flex items-center gap-2">
+                <i data-lucide="shopping-cart" class="w-6 h-6 text-primary"></i>
+                Order Summary
+            </h2>
+
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center p-4 bg-base-200/50 rounded-lg">
                 <div>
-                    <h3 class="font-bold">Subscribe to {{ selected_product.name }}</h3>
-                    <div class="text-xs">
-                        You are setting up payment for <strong>{{ selected_plan.nickname|default:selected_plan.recurring.interval|title }}</strong> plan 
-                        ({{ selected_plan.unit_amount_decimal|floatformat:2 }} {{ selected_plan.currency|upper }}/{{ selected_plan.recurring.interval }}).
+                    {% if selected_plan %}
+                        <h3 class="font-bold text-lg">{{ selected_product.name }}</h3>
+                        <p class="text-base-content/70">
+                            {{ selected_plan.nickname|default:selected_plan.recurring.interval|title }} Plan
+                            ({{ selected_plan.unit_amount_decimal|floatformat:2 }} {{ selected_plan.currency|upper }}/{{ selected_plan.recurring.interval }})
+                        </p>
+                    {% elif is_product_purchase %}
+                        <h3 class="font-bold text-lg">{{ product_purchase.name }}</h3>
+                        <p class="text-base-content/70">One-time purchase</p>
+                    {% endif %}
+                </div>
+                <div class="mt-4 md:mt-0 text-right">
+                    <div class="text-xs uppercase font-bold text-base-content/50">Total Amount</div>
+                    <div class="text-3xl font-black text-primary">
+                        {% if selected_plan %}
+                            {{ selected_plan.unit_amount_decimal|floatformat:2 }} <span class="text-sm font-normal text-base-content/70">{{ selected_plan.currency|upper }}</span>
+                        {% elif is_product_purchase %}
+                            {{ product_purchase.amount }} <span class="text-sm font-normal text-base-content/70">{{ product_purchase.currency }}</span>
+                        {% endif %}
                     </div>
                 </div>
             </div>
-            {% endif %}
-
-            <h2 class="card-title mb-4">Your Payment Methods</h2>
-            
-            <div class="text-center py-8">
-                <i data-lucide="credit-card" class="w-12 h-12 mx-auto text-base-content/30 mb-4"></i>
-                <p class="text-base-content/60 mb-4">No payment methods added yet</p>
-            </div>
         </div>
     </div>
-    
-    <div class="card bg-base-100 shadow-sm">
-        <div class="card-body">
-            <!-- Payment Gateway Selection -->
-            <div id="payment-gateways" class="space-y-4">
-                {% for gateway_id, gateway_config in payment_gateways.items %}
-                    {% if gateway_config.enabled %}
-                        {% if gateway_id == 'khalti' %}
-                        <button onclick="initiatePayment('khalti')" class="btn btn-outline btn-block h-auto py-3 flex flex-col items-center gap-2 hover:bg-purple-50 hover:border-purple-500 hover:text-purple-700">
-                            <span class="font-bold text-lg">Pay with Khalti</span>
-                            <span class="text-xs opacity-70">Digital Wallet / Mobile Banking</span>
-                        </button>
-                        {% elif gateway_id == 'stripe' %}
-                        <button onclick="initiatePayment('stripe')" class="btn btn-outline btn-block h-auto py-3 flex flex-col items-center gap-2 hover:bg-blue-50 hover:border-blue-500 hover:text-blue-700">
-                            <span class="font-bold text-lg">Pay with Card</span>
-                            <span class="text-xs opacity-70">Credit / Debit Card (Stripe)</span>
-                        </button>
-                        {% endif %}
-                    {% endif %}
-                {% endfor %}
-            </div>
+    {% endif %}
 
-            <div id="payment-loading" class="hidden text-center py-8">
-                <span class="loading loading-spinner loading-lg text-primary"></span>
-                <p class="mt-4 text-base-content/60">Processing your request...</p>
+    <div class="grid gap-6">
+        <!-- Saved Methods Section -->
+        {% if payment_methods %}
+        <div class="card bg-base-100 shadow-lg border border-base-200">
+            <div class="card-body">
+                <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+                    <i data-lucide="wallet" class="w-5 h-5 text-secondary"></i>
+                    Saved Cards
+                </h3>
+                <div class="space-y-3">
+                    {% for pm in payment_methods %}
+                    <div class="group relative border border-base-300 rounded-xl p-4 hover:border-primary hover:bg-base-100/50 transition-all cursor-pointer" onclick="selectPaymentMethod('{{ pm.id }}')">
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-4">
+                                <label class="label cursor-pointer p-0">
+                                    <input type="radio" name="payment_method" value="{{ pm.id }}" class="radio radio-primary" id="pm_{{ pm.id }}">
+                                </label>
+                                <div class="flex flex-col">
+                                    <div class="font-bold flex items-center gap-2">
+                                        {{ pm.card.brand|title }} •••• {{ pm.card.last4 }}
+                                        <span class="badge badge-sm badge-ghost">{{ pm.card.funding }}</span>
+                                    </div>
+                                    <div class="text-sm text-base-content/60">Expires {{ pm.card.exp_month }}/{{ pm.card.exp_year }}</div>
+                                </div>
+                            </div>
+                            <div class="opacity-0 group-hover:opacity-100 transition-opacity">
+                                <span class="text-primary text-sm font-medium">Click to select</span>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
             </div>
-            
-            <div id="payment-error" class="hidden alert alert-error mt-4">
-                <i data-lucide="alert-circle" class="w-6 h-6"></i>
-                <span id="error-message"></span>
+        </div>
+        {% endif %}
+
+        <!-- Payment Actions -->
+        <div class="card bg-base-100 shadow-lg border border-base-200">
+            <div class="card-body">
+                <!-- Add Card Form -->
+                <div id="add-card-section" class="hidden">
+                    <div class="flex items-center justify-between mb-6">
+                        <h3 class="font-bold text-lg">Add New Card</h3>
+                        <button type="button" class="btn btn-ghost btn-sm btn-circle" onclick="toggleAddCard(false)">
+                            <i data-lucide="x" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+
+                    <form id="payment-form" class="space-y-6">
+                        <div id="payment-element" class="min-h-[200px]">
+                            <!-- Stripe Payment Element -->
+                        </div>
+
+                        <div class="flex gap-3">
+                            <button type="submit" class="btn btn-primary flex-1" id="submit-button">
+                                <span id="button-text">Save & Continue</span>
+                                <span class="loading loading-spinner hidden" id="spinner"></span>
+                            </button>
+                            <button type="button" class="btn btn-ghost" onclick="toggleAddCard(false)">Cancel</button>
+                        </div>
+                        <div id="payment-message" class="hidden alert alert-error text-sm"></div>
+                    </form>
+                </div>
+
+                <!-- Gateway Selection / Main Actions -->
+                <div id="payment-gateways" class="space-y-4">
+                    <h3 class="font-bold text-lg mb-4">Payment Options</h3>
+
+                    <button id="pay-button" onclick="payWithSelectedMethod()" class="btn btn-primary btn-block btn-lg hidden relative overflow-hidden">
+                        <div class="flex items-center justify-center gap-2">
+                            <i data-lucide="credit-card" class="w-5 h-5"></i>
+                            <span>Pay with Saved Card</span>
+                        </div>
+                    </button>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button onclick="toggleAddCard(true)" class="btn btn-outline h-auto py-4 flex flex-col items-center gap-2 hover:bg-base-200 hover:border-base-content/20">
+                            <span class="bg-base-200 p-2 rounded-full"><i data-lucide="plus" class="w-5 h-5"></i></span>
+                            <span class="font-medium">Add New Card</span>
+                        </button>
+
+                        {% for gateway_id, gateway_config in payment_gateways.items %}
+                            {% if gateway_config.enabled %}
+                                {% if gateway_id == 'khalti' %}
+                                <button onclick="initiatePayment('khalti')" class="btn btn-outline h-auto py-4 flex flex-col items-center gap-2 hover:bg-purple-50 hover:border-purple-500 hover:text-purple-700">
+                                    <span class="bg-purple-100 text-purple-700 p-2 rounded-full"><i data-lucide="smartphone" class="w-5 h-5"></i></span>
+                                    <span class="font-medium">Pay with Khalti</span>
+                                </button>
+                                {% endif %}
+                            {% endif %}
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div id="payment-loading" class="hidden py-12 text-center">
+                    <span class="loading loading-spinner loading-lg text-primary mb-4"></span>
+                    <h4 class="font-bold text-lg">Processing Secure Payment</h4>
+                    <p class="text-base-content/60">Please do not close this window...</p>
+                </div>
+
+                <div id="payment-error" class="hidden alert alert-error mt-4 shadow-lg">
+                    <i data-lucide="alert-circle" class="w-6 h-6"></i>
+                    <span id="error-message"></span>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<script src="https://js.stripe.com/v3/"></script>
 <script>
-async function initiatePayment(gateway) {
-    const loadingEl = document.getElementById('payment-loading');
-    const gatewaysEl = document.getElementById('payment-gateways');
-    const errorEl = document.getElementById('payment-error');
-    const errorMsgEl = document.getElementById('error-message');
-    
-    // Reset UI
-    loadingEl.classList.remove('hidden');
-    gatewaysEl.classList.add('hidden');
-    errorEl.classList.add('hidden');
-    
-    try {
-        const response = await fetch('/api/finances/payments/initiate/', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRFToken': getCookie('csrftoken')
+    // Stripe Elements & Add Card Logic
+    let elements;
+    let paymentElement;
+
+    async function toggleAddCard(show) {
+        const section = document.getElementById('add-card-section');
+        const gateways = document.getElementById('payment-gateways');
+
+        if (show) {
+            section.classList.remove('hidden');
+            gateways.classList.add('hidden');
+            if (!elements) {
+                await initializeStripeElements();
+            }
+        } else {
+            section.classList.add('hidden');
+            gateways.classList.remove('hidden');
+        }
+    }
+
+    async function initializeStripeElements() {
+        const spinner = document.getElementById('spinner');
+        const buttonText = document.getElementById('button-text');
+
+        try {
+            // 1. Create SetupIntent on backend
+            // Note: Sending empty object as body to satisfy Content-Type header if needed by some middlewares,
+            // though Serializer has no required fields.
+            const response = await fetch('/api/finances/setup-intents/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({})
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json();
+                console.error('Setup failed:', errorData);
+                throw new Error(errorData.detail || 'Failed to initialize payment setup');
+            }
+
+            const data = await response.json();
+            const clientSecret = data.client_secret;
+
+            // 2. Initialize Stripe Elements
+            const appearance = { theme: 'stripe' };
+            elements = stripe.elements({ clientSecret, appearance });
+
+            paymentElement = elements.create('payment');
+            paymentElement.mount('#payment-element');
+
+        } catch (error) {
+            console.error('Setup error:', error);
+            const messageContainer = document.querySelector('#payment-message');
+            messageContainer.classList.remove('hidden');
+            messageContainer.textContent = error.message;
+        }
+    }
+
+    const form = document.getElementById('payment-form');
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        if (!stripe || !elements) {
+            return;
+        }
+
+        const submitButton = document.getElementById('submit-button');
+        const spinner = document.getElementById('spinner');
+        const buttonText = document.getElementById('button-text');
+        const messageContainer = document.querySelector('#payment-message');
+
+        submitButton.disabled = true;
+        spinner.classList.remove('hidden');
+        buttonText.classList.add('hidden');
+        messageContainer.classList.add('hidden');
+
+        const { error, setupIntent } = await stripe.confirmSetup({
+            elements,
+            confirmParams: {
+                return_url: window.location.href,
             },
-            body: JSON.stringify({
-                gateway: gateway,
-                amount: '{{ selected_plan.unit_amount_decimal|default:"1000" }}', // Use plan amount or default
-                currency: '{{ selected_plan.currency|default:"NPR"|upper }}',
-                purchase_order_id: '{{ selected_plan.id|default:"test_ref" }}',
-                purchase_order_name: 'Subscription to {{ selected_product.name|default:"Test Plan" }}',
-                return_url: window.location.origin + "{% url 'finances:subscription' %}",
-                // Customer info will be populated by backend from request.user
-            })
+            redirect: 'if_required'
         });
 
-        const data = await response.json();
-
-        if (!response.ok) {
-            throw new Error(data.message || 'Payment initiation failed');
-        }
-
-        if (data.payment_url) {
-            window.location.href = data.payment_url;
+        if (error) {
+            messageContainer.textContent = error.message;
+            messageContainer.classList.remove('hidden');
+            submitButton.disabled = false;
+            spinner.classList.add('hidden');
+            buttonText.classList.remove('hidden');
+        } else if (setupIntent && setupIntent.status === 'succeeded') {
+            // Reload to show new card
+            window.location.reload();
         } else {
-            throw new Error('No payment URL returned');
+             // Handle 3DS redirect or other statuses
+             console.log('Setup status:', setupIntent ? setupIntent.status : 'unknown');
         }
-        
-    } catch (error) {
-        console.error('Payment error:', error);
-        loadingEl.classList.add('hidden');
-        gatewaysEl.classList.remove('hidden');
-        errorMsgEl.textContent = error.message;
-        errorEl.classList.remove('hidden');
-    }
-}
+    });
 
-// Helper to get CSRF token
-function getCookie(name) {
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-        const cookies = document.cookie.split(';');
-        for (let i = 0; i < cookies.length; i++) {
-            const cookie = cookies[i].trim();
-            if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                break;
+    // Clean URL query params to hide sensitive info
+    if (window.history.replaceState) {
+        const url = new URL(window.location.href);
+        if (url.searchParams.has('amount') || url.searchParams.has('product_name')) {
+            url.searchParams.delete('amount');
+            url.searchParams.delete('product_name');
+            window.history.replaceState(null, '', url.toString());
+        }
+    }
+
+    const stripe = Stripe("{{ stripe_public_key }}");
+    // ... (rest of js is mostly same logic, but we need to update payload)
+
+    // JS Update for payload Construction
+    async function initiatePayment(gateway, paymentMethodId = null) {
+        // ... ui reset ...
+        const loadingEl = document.getElementById('payment-loading');
+        const gatewaysEl = document.getElementById('payment-gateways');
+        const errorEl = document.getElementById('payment-error');
+        const errorMsgEl = document.getElementById('error-message');
+
+        loadingEl.classList.remove('hidden');
+        gatewaysEl.classList.add('hidden');
+        errorEl.classList.add('hidden');
+
+        try {
+            const payload = {
+                gateway: gateway,
+                {% if is_product_purchase %}
+                purchase_order_id: '{{ product_purchase.id }}',
+                return_url: window.location.origin + "{% url 'content:products_list' %}",
+                {% elif selected_plan %}
+                purchase_order_id: '{{ selected_plan.id|default:"test_ref" }}',
+                return_url: window.location.origin + "{% url 'finances:subscription' %}",
+                {% else %}
+                // Fallback for direct access without params
+                purchase_order_id: 'unknown',
+                return_url: window.location.origin + "{% url 'finances:index' %}",
+                {% endif %}
+            };
+
+            if (gateway === 'khalti') {
+                 // Khalti specific adjustments if needed
+                 // e.g. ensure return_url is set correctly
+            }
+
+            if (paymentMethodId) {
+                payload.payment_method_id = paymentMethodId;
+            }
+
+            const csrfToken = getCookie('csrftoken');
+            const response = await fetch('/api/finances/payments/initiate/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrfToken
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.message || data.error || 'Payment initiation failed');
+            }
+
+            if (data.payment_url) {
+                window.location.href = data.payment_url;
+            } else if (data.status === 'completed') {
+                // Payment successful immediately (e.g. saved card)
+                // Redirect to return_url with status
+                const returnUrl = new URL(payload.return_url);
+                returnUrl.searchParams.set('status', 'success');
+                returnUrl.searchParams.set('gateway', gateway);
+                window.location.href = returnUrl.toString();
+            } else if (gateway === 'stripe' && data.client_secret) {
+                 // Handle Stripe Action
+                 const { error, paymentIntent } = await stripe.confirmCardPayment(data.client_secret);
+                 if (error) {
+                     throw new Error(error.message);
+                 } else if (paymentIntent.status === 'succeeded') {
+                     const returnUrl = new URL(payload.return_url);
+                     returnUrl.searchParams.set('status', 'success');
+                     returnUrl.searchParams.set('gateway', gateway);
+                     window.location.href = returnUrl.toString();
+                 } else {
+                     throw new Error('Payment status: ' + paymentIntent.status);
+                 }
+            } else {
+                 throw new Error('No payment URL returned');
+            }
+
+        } catch (error) {
+            console.error('Payment error:', error);
+            loadingEl.classList.add('hidden');
+            gatewaysEl.classList.remove('hidden');
+            errorMsgEl.textContent = error.message;
+            errorEl.classList.remove('hidden');
+        }
+    }
+
+    // Helper to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                // Does this cookie string begin with the name we want?
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
             }
         }
+        return cookieValue;
     }
-    return cookieValue;
-}
-</script>
-{% endblock %}
+    </script>
+    {% endblock %}

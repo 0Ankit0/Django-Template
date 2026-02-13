@@ -25,6 +25,7 @@ class PaymentIntentSerializer(serializers.ModelSerializer):
         required=True,
         write_only=True,
     )
+    client_secret = serializers.CharField(read_only=True)
 
     class Meta:
         model = djstripe_models.PaymentIntent
@@ -51,6 +52,8 @@ class PaymentIntentSerializer(serializers.ModelSerializer):
 
 
 class SetupIntentSerializer(serializers.ModelSerializer):
+    client_secret = serializers.CharField(read_only=True)
+
     class Meta:
         model = djstripe_models.SetupIntent
         fields = ("id", "client_secret")

@@ -1,10 +1,7 @@
-import hashid_field
+from core.models import BaseModel
 from django.conf import settings
 from django.db import IntegrityError, models, transaction
-from django.db.models import Q, UniqueConstraint
 from django.utils.text import slugify
-
-from core.models import BaseModel
 
 from .. import constants
 from ..managers import TenantManager
@@ -82,6 +79,10 @@ class Tenant(BaseModel):
     def email(self):
         return self.billing_email if self.billing_email else self.created_by.email
 
+    @email.setter
+    def email(self, value):
+        self.billing_email = value
+
     @property
     def owners_count(self):
         """
@@ -98,5 +99,6 @@ class Tenant(BaseModel):
         return self.members.filter(tenant_memberships__role=constants.TenantUserRole.OWNER).all()
 
     def __init__(self, *args, **kwargs):
+        kwargs.pop("subdomain", None)  # Remove unsupported subdomain field if present
         super().__init__(*args, **kwargs)
         self.__original_name = self.name
