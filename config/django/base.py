@@ -26,22 +26,36 @@ ALLOWED_HOSTS = ['*']
 
 
 # Application definition
+SHARED_APPS = [
+    'django_tenants',  # mandatory
+    'apps.tenancy',  # you must list the app where your tenant model resides in
 
-INSTALLED_APPS = [
-    'django.contrib.admin',
+    'django.contrib.contenttypes',  # you must list this app in order to use Django's permission framework
+
     'django.contrib.auth',
-    'django.contrib.contenttypes',
     'django.contrib.sessions',
+    'django.contrib.sites',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.admin',
+
     'rest_framework',
     'easyaudit',
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
+
     'apps.iam',
 ]
 
+TENANT_APPS = [
+    'apps.iam',
+]
+
+INSTALLED_APPS = list(set(SHARED_APPS + TENANT_APPS))
+
+
 MIDDLEWARE = [
+    'django_tenants.middleware.main.TenantMainMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -76,13 +90,26 @@ WSGI_APPLICATION = 'config.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
+
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+    "default":{
+        "ENGINE": 'django_tenants.postgresql_backend',
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("POSTGRES_HOST"),
+        "PORT": env("POSTGRES_PORT"),
     }
 }
 
+DATABASE_ROUTERS = (
+    'django_tenants.routers.TenantSyncRouter',
+)
+
+TENANT_MODEL = "tenancy.Client"  # app.Model
+
+TENANT_DOMAIN_MODEL = "tenancy.Domain"  # app.Model
 
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
@@ -124,7 +151,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTH_USER_MODEL = 'iam.User'
+AUTH_USER_MODEL = "iam.User"
 
 CELERY_BROKER_URL = env(
     "CELERY_BROKER_URL"
@@ -151,8 +178,8 @@ REST_FRAMEWORK = {
     'DEFAULT_THROTTLE_CLASSES': (
         'rest_framework.throttling.AnonRateThrottle',
         'rest_framework.throttling.ScopedRateThrottle',
-        'core.throttle.BurstRateThrottle',
-        'core.throttle.SustainedRateThrottle',
+        'apps.core.throttle.BurstRateThrottle',
+        'apps.core.throttle.SustainedRateThrottle',
     ),
     'DEFAULT_THROTTLE_RATES': {
         'anon': '10/minute',
