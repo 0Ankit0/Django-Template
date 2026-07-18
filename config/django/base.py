@@ -112,6 +112,7 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+AUTH_USER_MODEL = 'iam.User'
 
 CELERY_BROKER_URL = env(
     "CELERY_BROKER_URL"
