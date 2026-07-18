@@ -10,22 +10,17 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
-from pathlib import Path
+from config.env import env, BASE_DIR
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
+env.read_env(BASE_DIR / '.env')
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-4+*tbwvxfp6r&l@o^300a7cqsji5#zm=9co032efo_cx7#3p*1'
+SECRET_KEY = env('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = env.bool('DEBUG', default=False)
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -37,6 +32,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -115,3 +111,21 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+
+
+CELERY_BROKER_URL = env(
+    "CELERY_BROKER_URL"
+)
+
+CELERY_RESULT_BACKEND = env(
+    "CELERY_RESULT_BACKEND"
+)
+
+CELERY_RESULT_EXTENDED = env.bool(
+    "CELERY_RESULT_EXTENDED", default=True
+)
+
+CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+from config.settings.celery import *
+from config.settings.file_storage import *
