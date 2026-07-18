@@ -1,8 +1,9 @@
 from django.db import models
-from django_tenants.models import TenantMixin
+from tenant_users.tenants.models import TenantBase
 
-class Client(TenantMixin):
+class Client(TenantBase):
     name = models.CharField(max_length=200)
-    created_on = models.DateField(auto_now_add=True)
+    description = models.TextField(blank=True, null=True)
+    created_at = models.DateField(auto_now_add=True)
 
     auto_create_schema = True

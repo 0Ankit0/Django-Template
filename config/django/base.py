@@ -39,16 +39,21 @@ SHARED_APPS = [
     'django.contrib.staticfiles',
     'django.contrib.admin',
 
+    'tenant_users.permissions',
+    'tenant_users.tenants',
+
     'rest_framework',
     'easyaudit',
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
 
-    'apps.iam',
+    'apps.users',
 ]
 
 TENANT_APPS = [
-    'apps.iam',
+    'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'tenant_users.permissions',
 ]
 
 INSTALLED_APPS = list(set(SHARED_APPS + TENANT_APPS))
@@ -62,6 +67,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'tenant_users.tenants.middleware.TenantAccessMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     "easyaudit.middleware.easyaudit.EasyAuditMiddleware",
@@ -111,6 +117,12 @@ TENANT_MODEL = "tenancy.Client"  # app.Model
 
 TENANT_DOMAIN_MODEL = "tenancy.Domain"  # app.Model
 
+TENANT_USERS_DOMAIN = "localhost"
+
+AUTHENTICATION_BACKENDS = ("tenant_users.permissions.backend.UserBackend")
+
+TENANT_USERS_ACCESS_ERROR_MESSAGE = "You do not have access to this tenant."
+
 # Password validation
 # https://docs.djangoproject.com/en/6.0/ref/settings/#auth-password-validators
 
@@ -151,7 +163,7 @@ STATIC_ROOT = BASE_DIR / "staticfiles"
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-AUTH_USER_MODEL = "iam.User"
+AUTH_USER_MODEL = "users.TenantUser"
 
 CELERY_BROKER_URL = env(
     "CELERY_BROKER_URL"
@@ -185,7 +197,7 @@ REST_FRAMEWORK = {
         'anon': '10/minute',
         'burst': '3/second',
         'sustained': '100/hour',
-        'iam': '4/minute',
+        'users': '4/minute',
     }
 }
 
