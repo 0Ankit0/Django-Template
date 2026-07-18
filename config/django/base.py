@@ -46,6 +46,7 @@ SHARED_APPS = [
     'easyaudit',
     'corsheaders',
     'rest_framework_simplejwt.token_blacklist',
+    'django_toolbar',
 
     'apps.users',
 ]
@@ -220,6 +221,10 @@ SIMPLE_JWT = {
 
 # CORS_ALLOWED_ORIGINS = ['*']
 CORS_ALLOW_ALL_ORIGINS = True
+
+INTERNAL_IPS = [
+    "127.0.0.1",
+]
 
 from config.settings.celery import *
 from config.settings.file_storage import *
