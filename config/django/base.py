@@ -10,6 +10,8 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/6.0/ref/settings/
 """
 
+from datetime import timedelta
+
 from config.env import env, BASE_DIR
 
 env.read_env(BASE_DIR / '.env')
@@ -33,13 +35,16 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'rest_framework',
-    "easyaudit",
-    "apps.iam",
+    'easyaudit',
+    'corsheaders',
+    'rest_framework_simplejwt.token_blacklist',
+    'apps.iam',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -114,6 +119,8 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -132,6 +139,48 @@ CELERY_RESULT_EXTENDED = env.bool(
 )
 
 CELERY_BROKER_CONNECTION_RETRY_ON_STARTUP = True
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ),
+    'DEFAULT_PERMISSION_CLASSES': (
+        'rest_framework.permissions.IsAuthenticated',
+    ),
+    'DEFAULT_THROTTLE_CLASSES': (
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.ScopedRateThrottle',
+        'core.throttle.BurstRateThrottle',
+        'core.throttle.SustainedRateThrottle',
+    ),
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '10/minute',
+        'burst': '3/second',
+        'sustained': '100/hour',
+        'iam': '4/minute',
+    }
+}
+
+CACHES = {
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": env("REDIS_URL"),
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
+    }
+}
+
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=5),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": SECRET_KEY,
+}
+
+# CORS_ALLOWED_ORIGINS = ['*']
+CORS_ALLOW_ALL_ORIGINS = True
 
 from config.settings.celery import *
 from config.settings.file_storage import *
