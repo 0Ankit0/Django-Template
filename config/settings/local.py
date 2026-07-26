@@ -9,8 +9,7 @@ from .base import env
 DEBUG = True
 # https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 SECRET_KEY = env(
-    "DJANGO_SECRET_KEY",
-    default="OLN9lFbX2rFEvPOh97sYOlKW5XD5MDCnSSbL4q6t63K0OHihEFwFLCgPqBhfC2PU",
+    "DJANGO_SECRET_KEY"
 )
 # https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = ["localhost", "0.0.0.0", "127.0.0.1"]  # noqa: S104
@@ -28,7 +27,7 @@ CACHES = {
 # EMAIL
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-host
-EMAIL_HOST = env("EMAIL_HOST", default="mailpit")
+EMAIL_HOST = env("EMAIL_HOST")
 # https://docs.djangoproject.com/en/dev/ref/settings/#email-port
 EMAIL_PORT = 1025
 
