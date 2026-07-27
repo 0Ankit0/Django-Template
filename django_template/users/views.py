@@ -18,8 +18,6 @@ if TYPE_CHECKING:
 
 class UserDetailView(LoginRequiredMixin, DetailView):
     model = User
-    slug_field = "username"
-    slug_url_kwarg = "username"
 
 
 user_detail_view = UserDetailView.as_view()
@@ -46,7 +44,7 @@ class UserRedirectView(LoginRequiredMixin, RedirectView):
     permanent = False
 
     def get_redirect_url(self) -> str:
-        return reverse("users:detail", kwargs={"username": self.request.user.username})
+        return reverse("users:detail", kwargs={"pk": self.request.user.pk})
 
 
 user_redirect_view = UserRedirectView.as_view()

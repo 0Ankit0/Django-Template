@@ -8,7 +8,6 @@ from django_template.users.models import User
 
 
 class UserFactory(DjangoModelFactory[User]):
-    username = Faker("user_name")
     email = Faker("email")
     name = Faker("name")
 
@@ -32,5 +31,5 @@ class UserFactory(DjangoModelFactory[User]):
 
     class Meta:
         model = User
-        django_get_or_create = ["username"]
+        django_get_or_create = ["email"]
         skip_postgeneration_save = True
