@@ -13,6 +13,43 @@ Moved to [settings](https://cookiecutter-django.readthedocs.io/en/latest/1-getti
 
 ## Basic Commands
 
+### Multi-Tenancy Setup (django-tenants + django-tenant-users)
+
+Run shared migrations first:
+
+    uv run python manage.py migrate_schemas --shared
+
+Create the public tenant and owner:
+
+    uv run python manage.py create_public_tenant --domain_url localhost --owner_email admin@example.com
+
+Create a superuser in an existing tenant schema (example uses `public`):
+
+    uv run python manage.py create_tenant_superuser --schema public
+
+Then run tenant migrations:
+
+    uv run python manage.py migrate_schemas
+
+For local tenant routing, use domains under `.localhost` such as `acme.localhost`.
+
+### shadcn-django + django-cotton Setup
+
+The project is initialized for `shadcn_django` and stores components in `templates/cotton`.
+
+Install Tailwind packages:
+
+    npm install -D tailwindcss tw-animate-css
+
+Build Tailwind output from `input.css`:
+
+    npx @tailwindcss/cli -i input.css -o django_template/static/css/output.css --watch
+
+Add more shadcn components anytime:
+
+    uv run shadcn_django list
+    uv run shadcn_django add button
+
 ### Setting Up Your Users
 
 - To create a **normal user account**, just go to Sign Up and fill out the form. Once you submit it, you'll see a "Verify Your E-mail Address" page. Go to your console to see a simulated email verification message. Copy the link into your browser. Now the user's email should be verified and ready to go.

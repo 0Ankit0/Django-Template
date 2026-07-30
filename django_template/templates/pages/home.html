@@ -1,3 +1,24 @@
 {% extends "base.html" %}
 
+{% block content %}
+	<div class="py-5 d-flex justify-content-center">
+		<c-card class="w-100" style="max-width: 42rem;">
+			<c-card.header>
+				<c-card.title>Multi-tenant Django is now configured</c-card.title>
+				<c-card.description>
+					This project now includes django-tenants, django-tenant-users, and shadcn-django.
+				</c-card.description>
+			</c-card.header>
+			<c-card.content class="d-flex gap-2 flex-wrap">
+				<a class="text-decoration-none" href="/admin/">
+					<c-button>Open Admin</c-button>
+				</a>
+				<a class="text-decoration-none" href="/api/docs/">
+					<c-button variant="outline">Open API Docs</c-button>
+				</a>
+			</c-card.content>
+		</c-card>
+	</div>
+{% endblock content %}
+
 
