@@ -88,6 +88,7 @@ THIRD_PARTY_SHARED_APPS = [
     "tenant_users.permissions",
     "django_cotton",
     "crispy_forms",
+    "imagekit",
     "crispy_bootstrap5",
     "allauth",
     "allauth.account",
