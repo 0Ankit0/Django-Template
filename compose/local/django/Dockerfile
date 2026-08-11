@@ -43,7 +43,7 @@ RUN groupadd --gid 1000 dev-user \
   && echo dev-user ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/dev-user \
   && chmod 0440 /etc/sudoers.d/dev-user
 
-ENV PATH="/${APP_HOME}/.venv/bin:$PATH"
+ENV PATH="${APP_HOME}/.venv/bin:$PATH"
 ENV PYTHONPATH="${APP_HOME}/.venv/lib/python3.14/site-packages:$PYTHONPATH"
 
 COPY ./compose/production/django/entrypoint /entrypoint
@@ -53,6 +53,10 @@ RUN chmod +x /entrypoint
 COPY ./compose/local/django/start /start
 RUN sed -i 's/\r$//g' /start
 RUN chmod +x /start
+
+COPY ./compose/local/django/start-tailwind /start-tailwind
+RUN sed -i 's/\r$//g' /start-tailwind
+RUN chmod +x /start-tailwind
 
 
 COPY ./compose/local/django/celery/worker/start /start-celeryworker

@@ -1,8 +1,11 @@
 # General
 # ------------------------------------------------------------------------------
 USE_DOCKER=yes
+DJANGO_SETTINGS_MODULE=config.settings.local
+DJANGO_RUN_MIGRATIONS=True
 IPYTHONDIR=/app/.ipython
 DJANGO_TENANT_USERS_DOMAIN=localhost
+TAILWIND_CLI_AUTOMATIC_DOWNLOAD=True
 
 # Redis
 # ------------------------------------------------------------------------------

@@ -5,6 +5,12 @@ set -o pipefail
 set -o nounset
 
 
+if [ "${DJANGO_RUN_MIGRATIONS:-False}" = "True" ]; then
+  python /app/manage.py migrate_schemas --shared
+  python /app/manage.py migrate_schemas
+fi
+
+python /app/manage.py tailwind build
 python /app/manage.py collectstatic --noinput
 
 compress_enabled() {
