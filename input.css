@@ -1,5 +1,5 @@
 @import "tailwindcss";
-@import "tw-animate-css";
+@import "./tw-animate.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -114,6 +114,10 @@
 }
 
 @layer base {
+    [x-cloak] {
+        display: none !important;
+    }
+
     * {
         @apply border-border outline-ring/50;
     }
