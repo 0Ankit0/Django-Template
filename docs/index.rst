@@ -11,6 +11,7 @@ Welcome to django-template's documentation!
    :caption: Contents:
 
    howto
+   docker
    users
 
 

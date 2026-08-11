@@ -1,138 +1,166 @@
 # django-template
 
-A common django template
-
-[![Built with Cookiecutter Django](https://img.shields.io/badge/built%20with-Cookiecutter%20Django-ff69b4.svg?logo=cookiecutter)](https://github.com/cookiecutter/cookiecutter-django/)
-[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+Custom multi-tenant Django starter with tenant-aware auth and reusable UI components.
 
 License: Apache Software License 2.0
 
-## Settings
+## Stack
 
-Moved to [settings](https://cookiecutter-django.readthedocs.io/en/latest/1-getting-started/settings.html).
+- Django 6
+- PostgreSQL schema multitenancy via django-tenants
+- Global user identities + tenant permissions via django-tenant-users
+- Celery + Redis
+- DRF + drf-spectacular
+- Tailwind CSS via django-tailwind-cli + django-cotton + shadcn-django components
 
-## Basic Commands
+## Local Development
 
-### Multi-Tenancy Setup (django-tenants + django-tenant-users)
+### 1. Install dependencies
 
-Run shared migrations first:
+    uv sync
+
+If you are upgrading an older checkout that used Node Tailwind tooling, add Django Tailwind CLI explicitly:
+
+    uv add django-tailwind-cli
+
+Or use the reusable command:
+
+    just setup-local
+
+`just setup-local` runs dependency sync and `tailwind setup` so the standalone Tailwind binary is ready.
+
+### 2. Run migrations (shared schema first)
 
     uv run python manage.py migrate_schemas --shared
 
-Create the public tenant and owner:
+### 3. Create public tenant
 
     uv run python manage.py create_public_tenant --domain_url localhost --owner_email admin@example.com
 
-Create a superuser in an existing tenant schema (example uses `public`):
-
-    uv run python manage.py create_tenant_superuser --schema public
-
-Then run tenant migrations:
+### 4. Migrate tenant schemas
 
     uv run python manage.py migrate_schemas
 
-For local tenant routing, use domains under `.localhost` such as `acme.localhost`.
+### 5. Create a tenant superuser
 
-### shadcn-django + django-cotton Setup
+    uv run python manage.py create_tenant_superuser --schema public
 
-The project is initialized for `shadcn_django` and stores components in `templates/cotton`.
+### 6. Start the app
 
-Install Tailwind packages:
+    uv run python manage.py runserver
 
-    npm install -D tailwindcss tw-animate-css
+Or:
 
-Build Tailwind output from `input.css`:
+    just runserver
 
-    npx @tailwindcss/cli -i input.css -o django_template/static/css/output.css --watch
+For local tenant routing, use domains under .localhost such as acme.localhost.
 
-Add more shadcn components anytime:
+## UI Components (django-cotton + shadcn-django)
+
+Cotton components live in django_template/templates/cotton.
+
+Pre-added shadcn/cotton component set includes:
+
+- Navigation and menus: navigation_menu, dropdown_menu, multi_menu
+- Layout: card, sheet, tabs, separator, accordion
+- Forms: form, input, textarea, checkbox, select, combobox, label
+- Feedback and overlays: alert, alert_dialog, dialog, popover, toast, progress
+- Data display: table, badge, button
+
+Custom project-level wrappers are also available:
+
+- navbar (navbar, navbar.link)
+- sidebar (sidebar, sidebar.group, sidebar.item)
+- multi_menu (multi_menu, multi_menu.section, multi_menu.item)
+
+Initialize or add more shadcn components:
 
     uv run shadcn_django list
     uv run shadcn_django add button
+    uv run shadcn_django add card
 
-### Setting Up Your Users
+Add and integrate the full shadcn allauth pack:
 
-- To create a **normal user account**, just go to Sign Up and fill out the form. Once you submit it, you'll see a "Verify Your E-mail Address" page. Go to your console to see a simulated email verification message. Copy the link into your browser. Now the user's email should be verified and ready to go.
+    just add-shadcn-allauth
 
-- To create a **superuser account**, use this command:
+This command runs `uvx shadcn_django@latest add allauth` and synchronizes generated templates into `django_template/templates/account` and `django_template/templates/cotton` so they are used by Django's active template path.
 
-      uv run python manage.py createsuperuser
+Build Tailwind CSS from input.css (no Node required):
 
-For convenience, you can keep your normal user logged in on Chrome and your superuser logged in on Firefox (or similar), so that you can see how the site behaves for both kinds of users.
+    uv run python manage.py tailwind setup
+    uv run python manage.py tailwind build
+    uv run python manage.py tailwind watch
 
-### Type checks
+`tw-animate-css` is installed using the manual method recommended by shadcn-django when using django-tailwind-cli:
 
-Running type checks with mypy:
+- `tw-animate.css` is vendored in the project root.
+- `input.css` imports it with `@import "./tw-animate.css";`.
 
-    uv run mypy django_template
+Reusable commands:
 
-### Test coverage
+    just tailwind-setup
+    just tailwind-build
+    just tailwind-build-force
+    just tailwind-watch
 
-To run the tests, check your test coverage, and generate an HTML coverage report:
+The base template already includes django_template/static/css/output.css and Alpine.js.
 
-    uv run coverage run -m pytest
-    uv run coverage html
-    uv run open htmlcov/index.html
+Component showcase page:
 
-#### Running tests with pytest
+    /components/
+
+The showcase includes live previews for all components, plus show-code and copy-code helpers.
+It also includes instant search and category filters to quickly find components and complex compositions.
+
+## Users
+
+- Sign up through the allauth flow.
+- Email is the login identifier.
+- Tenant access is enforced by middleware.
+
+## Commands
+
+### Reusable justfile commands
+
+    just setup-local
+    just check
+    just migrate-shared
+    just migrate-tenants
+    just create-public-tenant
+    just create-tenant-superuser
+    just test
+    just typecheck
+    just tailwind-setup
+    just tailwind-build
+    just tailwind-build-force
+    just tailwind-watch
+    just add-shadcn <component>
+    just add-shadcn-allauth
+
+### Run tests
 
     uv run pytest
 
-### Live reloading and Sass CSS compilation
+### Type checks
 
-Moved to [Live reloading and SASS compilation](https://cookiecutter-django.readthedocs.io/en/latest/2-local-development/developing-locally.html#using-webpack-or-gulp).
+    uv run mypy django_template
 
-### Celery
+### Coverage
 
-This app comes with Celery.
+    uv run coverage run -m pytest
+    uv run coverage html
 
-To run a celery worker:
+### Celery worker
 
-```bash
-cd django_template
-uv run celery -A config.celery_app worker -l info
-```
+    uv run celery -A config.celery_app worker -l info
 
-Please note: For Celery's import magic to work, it is important _where_ the celery commands are run. If you are in the same folder with _manage.py_, you should be right.
+### Celery beat
 
-To run [periodic tasks](https://docs.celeryq.dev/en/stable/userguide/periodic-tasks.html), you'll need to start the celery beat scheduler service. You can start it as a standalone process:
+    uv run celery -A config.celery_app beat
 
-```bash
-cd django_template
-uv run celery -A config.celery_app beat
-```
+## Notes
 
-or you can embed the beat service inside a worker with the `-B` option (not recommended for production use):
-
-```bash
-cd django_template
-uv run celery -A config.celery_app worker -B -l info
-```
-
-### Email Server
-
-In development, it is often nice to be able to see emails that are being sent from your application. For that reason local SMTP server [Mailpit](https://github.com/axllent/mailpit) with a web interface is available as docker container.
-
-Container mailpit will start automatically when you will run all docker containers.
-Please check [cookiecutter-django Docker documentation](https://cookiecutter-django.readthedocs.io/en/latest/2-local-development/developing-locally-docker.html) for more details how to start all containers.
-
-With Mailpit running, to view messages that are sent by your application, open your browser and go to `http://127.0.0.1:8025`
-
-### Sentry
-
-Sentry is an error logging aggregator service. You can sign up for a free account at <https://sentry.io/signup/?code=cookiecutter> or download and host it yourself.
-The system is set up with reasonable defaults, including 404 logging and integration with the WSGI application.
-
-You must set the DSN url in production.
-
-## Deployment
-
-The following details how to deploy this application.
-
-### Heroku
-
-See detailed [cookiecutter-django Heroku documentation](https://cookiecutter-django.readthedocs.io/en/latest/3-deployment/deployment-on-heroku.html).
-
-### Docker
-
-See detailed [cookiecutter-django Docker documentation](https://cookiecutter-django.readthedocs.io/en/latest/3-deployment/deployment-with-docker.html).
+- Keep tenancy model changes in django_template/tenants.
+- Keep auth profile changes in django_template/users.
+- Add or customize cotton components directly in django_template/templates/cotton.
+- Django admin login is overridden at django_template/templates/admin/login.html and uses the same cotton/tailwind visual system.

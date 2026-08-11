@@ -1,38 +1,82 @@
-How To - Project Documentation
+How To
 ======================================================================
 
-Get Started
+Local Development Workflow
 ----------------------------------------------------------------------
 
-Documentation can be written as rst files in `django_template/docs`.
+Use the reusable commands from ``justfile`` for day-to-day work::
 
+    just setup-local
+    just check
+    just runserver
 
-To build and serve docs, use the commands::
+Tenant setup helpers::
 
-    docker compose -f docker-compose.docs.yml up
+    just migrate-shared
+    just create-public-tenant
+    just migrate-tenants
+    just create-tenant-superuser
 
-
-
-Changes to files in `docs/_source` will be picked up and reloaded automatically.
-
-`Sphinx <https://www.sphinx-doc.org/>`_ is the tool used to build documentation.
-
-Docstrings to Documentation
+Tailwind CSS (Node-free)
 ----------------------------------------------------------------------
 
-The sphinx extension `apidoc <https://www.sphinx-doc.org/en/master/man/sphinx-apidoc.html>`_ is used to automatically document code using signatures and docstrings.
+This project uses ``django-tailwind-cli`` and does not require Node.js.
 
-Numpy or Google style docstrings will be picked up from project files and available for documentation. See the `Napoleon <https://sphinxcontrib-napoleon.readthedocs.io/en/latest/>`_ extension for details.
+To match shadcn-django guidance for non-Node setups, ``tw-animate-css`` is integrated via the manual download method.
 
-For an in-use example, see the `page source <_sources/users.rst.txt>`_ for :ref:`users`.
+Manual setup reference:
 
-To compile all docstrings automatically into documentation source files, use the command:
-    ::
+- ``tw-animate.css`` is stored at project root.
+- ``input.css`` includes ``@import "./tw-animate.css";``.
 
-        uv run make apidocs
+Initialize CLI binary and build output CSS::
 
+    just tailwind-setup
+    just tailwind-build
 
-This can be done in the docker container:
-    ::
+For active development, run Tailwind watcher::
 
-        docker run --rm docs make apidocs
+    just tailwind-watch
+
+Input and output paths are configured in Django settings:
+
+- ``TAILWIND_CLI_SRC_CSS = input.css``
+- ``TAILWIND_CLI_DIST_CSS = css/output.css``
+
+Templates and Components
+----------------------------------------------------------------------
+
+Add shadcn-django components::
+
+    just add-shadcn button
+
+Install and integrate allauth component templates::
+
+    just add-shadcn-allauth
+
+Important template locations:
+
+- ``django_template/templates/cotton`` for component templates
+- ``django_template/templates/account`` for allauth pages
+- ``django_template/templates/admin/login.html`` for custom admin login
+
+Documentation Authoring
+----------------------------------------------------------------------
+
+Serve docs with Docker::
+
+    docker compose -f docker-compose.docs.yml up --build
+
+Legacy CLI alternative::
+
+    docker-compose -f docker-compose.docs.yml up --build
+
+Or run docs locally::
+
+    cd docs
+    uv run make livehtml
+
+Generate API docs from docstrings::
+
+    cd docs
+    uv run make apidocs

@@ -21,7 +21,11 @@ if os.getenv("READTHEDOCS", default="False") == "True":
     os.environ["DJANGO_READ_DOT_ENV_FILE"] = "True"
     os.environ["USE_DOCKER"] = "no"
 else:
-    sys.path.insert(0, os.path.abspath("/app"))
+    repo_root = os.path.abspath("..")
+    if os.path.exists(os.path.join(repo_root, "config")):
+        sys.path.insert(0, repo_root)
+    else:
+        sys.path.insert(0, os.path.abspath("/app"))
 os.environ["DATABASE_URL"] = "sqlite:///readthedocs.db"
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings.local")
 django.setup()

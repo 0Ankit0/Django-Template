@@ -11,9 +11,12 @@ services:
     image: django_template_local_django
     container_name: django_template_local_django
     depends_on:
-      - postgres
-      - redis
-      - mailpit
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
     volumes:
       - /app/.venv
       - .:/app:z
@@ -23,6 +26,13 @@ services:
     ports:
       - '8000:8000'
     command: /start
+
+  tailwind:
+    <<: *django
+    image: django_template_local_tailwind
+    container_name: django_template_local_tailwind
+    ports: []
+    command: /start-tailwind
 
   postgres:
     build:
@@ -35,6 +45,12 @@ services:
       - django_template_local_postgres_data_backups:/backups
     env_file:
       - ./.envs/.local/.postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   mailpit:
     image: docker.io/axllent/mailpit:latest
@@ -47,15 +63,24 @@ services:
     container_name: django_template_local_redis
     volumes:
       - django_template_local_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   celeryworker:
     <<: *django
     image: django_template_local_celeryworker
     container_name: django_template_local_celeryworker
     depends_on:
-      - redis
-      - postgres
-      - mailpit
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
     ports: []
     command: /start-celeryworker
 
@@ -64,9 +89,12 @@ services:
     image: django_template_local_celerybeat
     container_name: django_template_local_celerybeat
     depends_on:
-      - redis
-      - postgres
-      - mailpit
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
     ports: []
     command: /start-celerybeat
 
