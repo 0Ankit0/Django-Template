@@ -6,6 +6,12 @@
 {% endblock title %}
 
 {% block main %}
-  {% block content %}
-  {% endblock content %}
+  <div class="py-6">
+    <c-card class="mx-auto w-full max-w-3xl">
+      <c-card.content class="pt-6">
+        {% block content %}
+        {% endblock content %}
+      </c-card.content>
+    </c-card>
+  </div>
 {% endblock main %}

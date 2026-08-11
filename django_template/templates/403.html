@@ -2,12 +2,18 @@
 
 {% block title %}Forbidden (403){% endblock title %}
 {% block content %}
-  <h1>Forbidden (403)</h1>
-  <p>
-    {% if exception %}
-      {{ exception }}
-    {% else %}
-      You're not allowed to access this page.
-    {% endif %}
-  </p>
+  <div class="py-6">
+    <c-card class="mx-auto w-full max-w-2xl">
+      <c-card.header>
+        <c-card.title>Forbidden (403)</c-card.title>
+        <c-card.description>
+          {% if exception %}
+            {{ exception }}
+          {% else %}
+            You're not allowed to access this page.
+          {% endif %}
+        </c-card.description>
+      </c-card.header>
+    </c-card>
+  </div>
 {% endblock content %}

@@ -86,6 +86,7 @@ THIRD_PARTY_SHARED_APPS = [
     "django_tenants",
     "tenant_users.tenants",
     "tenant_users.permissions",
+    "django_tailwind_cli",
     "django_cotton",
     "crispy_forms",
     "imagekit",
@@ -194,6 +195,11 @@ STATICFILES_FINDERS = [
     "django.contrib.staticfiles.finders.AppDirectoriesFinder",
 ]
 
+# django-tailwind-cli
+TAILWIND_CLI_SRC_CSS = env("TAILWIND_CLI_SRC_CSS", default="input.css")
+TAILWIND_CLI_DIST_CSS = env("TAILWIND_CLI_DIST_CSS", default="css/output.css")
+TAILWIND_CLI_AUTOMATIC_DOWNLOAD = env.bool("TAILWIND_CLI_AUTOMATIC_DOWNLOAD", default=True)
+
 # MEDIA
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#media-root
@@ -209,7 +215,7 @@ TEMPLATES = [
         # https://docs.djangoproject.com/en/dev/ref/settings/#std:setting-TEMPLATES-BACKEND
         "BACKEND": "django.template.backends.django.DjangoTemplates",
         # https://docs.djangoproject.com/en/dev/ref/settings/#dirs
-        "DIRS": [str(APPS_DIR / "templates"), str(BASE_DIR / "templates")],
+        "DIRS": [str(APPS_DIR / "templates")],
         # https://docs.djangoproject.com/en/dev/ref/settings/#app-dirs
         "APP_DIRS": True,
         "OPTIONS": {
