@@ -1,0 +1,25 @@
+{% extends "dj_control_room_base/panel_base.html" %}
+{% load i18n dcr_icons %}
+
+{% block panel_title %}{{ title|default:"Sentry Panel" }}{% endblock %}
+
+{% block panel_branding %}
+<h1 id="site-name"><a href="{% url 'controlroom_sentry:index' %}">Sentry Panel</a></h1>
+{% endblock %}
+
+{% block panel_breadcrumbs %}
+&rsaquo; <a href="{% url 'controlroom_sentry:index' %}">{% trans "Sentry" %}</a>
+{% endblock %}
+
+{% block panel_content %}
+{% endblock %}
+
+{% block content_title %}
+	{{ block.super }}
+	<ul class="object-tools">
+		<li><a href="{% url 'controlroom_sentry:index' %}">{% trans "Overview" %}</a></li>
+		<li><a href="{% url 'controlroom_sentry:integrations' %}">{% trans "Integrations" %}</a></li>
+		<li><a href="{% url 'controlroom_sentry:issues' %}">{% trans "Issues" %}</a></li>
+		<li><a href="{% url 'controlroom_sentry:test_event' %}">{% trans "Test Event" %}</a></li>
+	</ul>
+{% endblock %}

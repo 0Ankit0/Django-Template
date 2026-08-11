@@ -1,0 +1,110 @@
+{% extends "admin/controlroom_sentry/base.html" %}
+{% load i18n dcr_icons %}
+
+{% block panel_content %}
+<div class="dcr-page-header">
+  <div class="dcr-page-header__main">
+    <div class="dcr-page-header__icon dcr-icon-color--danger">{% dcr_icon "database" %}</div>
+    <div class="dcr-page-header__body">
+      <h1 class="dcr-page-header__title">{% trans "Issue Detail" %}</h1>
+      <p class="dcr-page-header__subtitle">{{ issue.title|default:issue_id }}</p>
+    </div>
+  </div>
+</div>
+
+{% if not api_settings.enabled %}
+<div class="messagelist"><div class="warning">{% trans "Configure SENTRY_ORG_SLUG and SENTRY_AUTH_TOKEN to enable issue actions." %}</div></div>
+{% endif %}
+
+{% if error_message %}
+<div class="messagelist"><div class="error">{{ error_message }}</div></div>
+{% endif %}
+
+{% if issue %}
+<div class="dcr-grid dcr-grid--3">
+  <div class="dcr-stat-card"><span class="dcr-stat-card__label">{% trans "Status" %}</span><strong class="dcr-stat-card__value">{{ issue.status }}</strong></div>
+  <div class="dcr-stat-card"><span class="dcr-stat-card__label">{% trans "Priority" %}</span><strong class="dcr-stat-card__value">{{ issue.priority|default:"-" }}</strong></div>
+  <div class="dcr-stat-card"><span class="dcr-stat-card__label">{% trans "Subscribed" %}</span><strong class="dcr-stat-card__value">{{ issue.isSubscribed }}</strong></div>
+</div>
+
+<div class="dcr-data-table dcr-mt-lg">
+  <div class="dcr-data-table__scroll">
+    <table>
+      <tbody>
+        <tr><th>{% trans "Short ID" %}</th><td>{{ issue.shortId }}</td></tr>
+        <tr><th>{% trans "Project" %}</th><td>{{ issue.project.slug }}</td></tr>
+        <tr><th>{% trans "Level" %}</th><td>{{ issue.level }}</td></tr>
+        <tr><th>{% trans "Assigned To" %}</th><td>{% if issue.assignedTo %}{{ issue.assignedTo.name|default:issue.assignedTo.email|default:issue.assignedTo.id }}{% else %}-{% endif %}</td></tr>
+        <tr><th>{% trans "Events" %}</th><td>{{ issue.count }}</td></tr>
+        <tr><th>{% trans "Users" %}</th><td>{{ issue.userCount }}</td></tr>
+        <tr><th>{% trans "First Seen" %}</th><td>{{ issue.firstSeen }}</td></tr>
+        <tr><th>{% trans "Last Seen" %}</th><td>{{ issue.lastSeen }}</td></tr>
+        <tr><th>{% trans "Permalink" %}</th><td><a href="{{ issue.permalink }}" target="_blank" rel="noreferrer">{{ issue.permalink }}</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<form method="post" class="dcr-form-card dcr-mt-lg">
+  {% csrf_token %}
+  <div class="form-row">
+    <label for="id_status">{% trans "Status" %}</label>
+    <select id="id_status" name="status">
+      <option value="">{% trans "No change" %}</option>
+      {% for item in status_choices %}
+      <option value="{{ item }}">{{ item }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="id_priority">{% trans "Priority" %}</label>
+    <select id="id_priority" name="priority">
+      <option value="">{% trans "No change" %}</option>
+      {% for item in priority_choices %}
+      <option value="{{ item }}">{{ item }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="id_assigned_to">{% trans "Assign To" %}</label>
+    <input id="id_assigned_to" type="text" name="assigned_to" placeholder="user:123, email@example.com, or team:456" />
+  </div>
+  <div class="form-row">
+    <label for="id_is_subscribed">{% trans "Subscription" %}</label>
+    <input type="hidden" name="toggle_subscription" value="1" />
+    <select id="id_is_subscribed" name="is_subscribed">
+      <option value="true">{% trans "Subscribed" %}</option>
+      <option value="false">{% trans "Unsubscribed" %}</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="id_is_bookmarked">{% trans "Bookmark" %}</label>
+    <input type="hidden" name="toggle_bookmark" value="1" />
+    <select id="id_is_bookmarked" name="is_bookmarked">
+      <option value="true">{% trans "Bookmarked" %}</option>
+      <option value="false">{% trans "Not bookmarked" %}</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="id_has_seen">{% trans "Seen" %}</label>
+    <input type="hidden" name="toggle_seen" value="1" />
+    <select id="id_has_seen" name="has_seen">
+      <option value="true">{% trans "Seen" %}</option>
+      <option value="false">{% trans "Unseen" %}</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="id_inbox">{% trans "Inbox / Reviewed" %}</label>
+    <input type="hidden" name="toggle_reviewed" value="1" />
+    <select id="id_inbox" name="inbox">
+      <option value="true">{% trans "Reviewed" %}</option>
+      <option value="false">{% trans "In Inbox" %}</option>
+    </select>
+  </div>
+  <div class="submit-row">
+    <button type="submit" class="default">{% trans "Apply Changes" %}</button>
+    <a class="button" href="{% url 'controlroom_sentry:issues' %}">{% trans "Back to Issues" %}</a>
+  </div>
+</form>
+{% endif %}
+{% endblock %}

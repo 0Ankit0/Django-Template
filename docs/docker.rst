@@ -28,7 +28,8 @@ Main local services:
 - ``postgres``: Local PostgreSQL database.
 - ``redis``: Broker/cache for celery and app usage.
 - ``mailpit``: Local email inbox UI on port 8025.
-- ``celeryworker``, ``celerybeat``, ``flower``: Background workers and monitoring.
+- ``celeryworker`` and ``celerybeat``: Background workers and scheduling.
+- Sentry monitoring is surfaced through the custom Django Control Room Sentry panel instead of Flower.
 
 Production Stack
 ----------------------------------------------------------------------
@@ -90,3 +91,18 @@ Important variables for container behavior:
 - ``DJANGO_TENANT_USERS_DOMAIN``
     - Local: ``localhost``
     - Production: your primary domain (for tenant-aware auth/user behavior)
+- ``CR_REGISTER_PANELS``
+    - Local default: ``True``
+    - Production default: ``False``
+- ``CR_REGISTER_REDIS_PANEL``, ``CR_REGISTER_CACHE_PANEL``, ``CR_REGISTER_URLS_PANEL``, ``CR_REGISTER_CELERY_PANEL``
+    - Per-panel overrides for whether each Control Room panel should also appear directly in Django admin.
+- ``CR_REGISTER_SENTRY_PANEL``
+    - Controls whether the custom Sentry panel is also registered directly in Django admin.
+- ``SENTRY_API_BASE_URL``
+    - Defaults to ``https://sentry.io/api/0``.
+- ``SENTRY_ORG_SLUG`` and ``SENTRY_AUTH_TOKEN``
+    - Required for the custom Sentry panel's issue-management pages.
+- ``SENTRY_PROJECT_SLUG``
+    - Optional default project filter for the issue stream.
+- ``SENTRY_DEFAULT_ISSUES_QUERY``
+    - Optional default Sentry issue search query, defaulting to ``is:unresolved``.

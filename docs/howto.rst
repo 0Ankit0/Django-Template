@@ -60,6 +60,48 @@ Important template locations:
 - ``django_template/templates/account`` for allauth pages
 - ``django_template/templates/admin/login.html`` for custom admin login
 
+Operations Dashboard
+----------------------------------------------------------------------
+
+This project includes Django Control Room with the official panels that fit the current stack:
+
+- Redis
+- Cache
+- URLs
+- Celery
+- Sentry (custom project panel)
+
+The custom Sentry panel adds the main operational features teams usually need:
+
+- inspect runtime Sentry SDK configuration
+- inspect Django, Celery, and Redis Sentry integrations
+- browse the organization issue stream
+- update issue status, assignee, and priority
+- toggle subscription, bookmark, seen, and inbox/reviewed state
+- send test message or exception events
+
+Local development defaults to registering these panels in both Django admin and the Control Room dashboard.
+Production defaults to dashboard-only behavior unless panel registration is explicitly enabled via environment variables.
+
+Default local routes::
+
+    /admin/dj-control-room/
+    /admin/dj-redis-panel/
+    /admin/dj-cache-panel/
+    /admin/dj-urls-panel/
+    /admin/dj-celery-panel/
+    /admin/sentry-panel/
+
+Required Sentry API variables for issue management:
+
+- ``SENTRY_API_BASE_URL``
+- ``SENTRY_ORG_SLUG``
+- ``SENTRY_AUTH_TOKEN``
+- ``SENTRY_PROJECT_SLUG`` (optional)
+- ``SENTRY_DEFAULT_ISSUES_QUERY`` (optional)
+
+If ``DJANGO_ADMIN_URL`` is customized, these routes move under that configured admin prefix.
+
 Documentation Authoring
 ----------------------------------------------------------------------
 

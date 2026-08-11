@@ -1,0 +1,44 @@
+{% extends "admin/controlroom_sentry/base.html" %}
+{% load i18n dcr_icons %}
+
+{% block panel_content %}
+<div class="dcr-page-header">
+  <div class="dcr-page-header__main">
+    <div class="dcr-page-header__icon dcr-icon-color--accent">{% dcr_icon "link" %}</div>
+    <div class="dcr-page-header__body">
+      <h1 class="dcr-page-header__title">{% trans "Sentry Integrations" %}</h1>
+      <p class="dcr-page-header__subtitle">{% trans "Check whether the Django, Celery, and Redis integrations are active in the current runtime." %}</p>
+    </div>
+  </div>
+</div>
+
+<div class="dcr-data-table">
+  <div class="dcr-data-table__scroll">
+    <table>
+      <thead>
+        <tr><th>{% trans "Integration" %}</th><th>{% trans "Status" %}</th></tr>
+      </thead>
+      <tbody>
+        {% for integration in integrations %}
+        <tr>
+          <td>{{ integration.name }}</td>
+          <td>
+            {% if integration.active %}
+            <span class="dcr-pill dcr-pill--success"><span class="dcr-pill__dot"></span>{% trans "Active" %}</span>
+            {% else %}
+            <span class="dcr-pill dcr-pill--danger"><span class="dcr-pill__dot"></span>{% trans "Inactive" %}</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="dcr-actions dcr-mt-lg">
+  <a class="button" href="{% url 'controlroom_sentry:index' %}">{% trans "Back to Overview" %}</a>
+  <a class="button" href="{% url 'controlroom_sentry:issues' %}">{% trans "Manage Issues" %}</a>
+  <a class="button default" href="{% url 'controlroom_sentry:test_event' %}">{% trans "Send Test Event" %}</a>
+</div>
+{% endblock %}

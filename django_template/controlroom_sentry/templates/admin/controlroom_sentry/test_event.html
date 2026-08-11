@@ -1,0 +1,41 @@
+{% extends "admin/controlroom_sentry/base.html" %}
+{% load i18n dcr_icons %}
+
+{% block panel_content %}
+<div class="dcr-page-header">
+  <div class="dcr-page-header__main">
+    <div class="dcr-page-header__icon dcr-icon-color--warning">{% dcr_icon "alert" %}</div>
+    <div class="dcr-page-header__body">
+      <h1 class="dcr-page-header__title">{% trans "Send Test Event" %}</h1>
+      <p class="dcr-page-header__subtitle">{% trans "Trigger a test message or exception to verify that Sentry ingestion works for this deployment." %}</p>
+    </div>
+  </div>
+</div>
+
+<form method="post" class="dcr-form-card">
+  {% csrf_token %}
+  <div class="form-row">
+    <label for="id_event_type">{% trans "Event Type" %}</label>
+    <select id="id_event_type" name="event_type">
+      <option value="message">{% trans "Message" %}</option>
+      <option value="exception">{% trans "Exception" %}</option>
+    </select>
+  </div>
+  <div class="form-row">
+    <label for="id_message">{% trans "Message" %}</label>
+    <textarea id="id_message" name="message" rows="4">Control Room Sentry test event</textarea>
+  </div>
+  <div class="submit-row">
+    <button type="submit" class="default">{% trans "Send Event" %}</button>
+    <a class="button" href="{% url 'controlroom_sentry:index' %}">{% trans "Cancel" %}</a>
+  </div>
+</form>
+
+{% if not overview.sdk_initialized %}
+<div class="messagelist"><div class="warning">{% trans "Sentry SDK is not configured in the current environment. Configure SENTRY_DSN first." %}</div></div>
+{% endif %}
+
+{% if not api_settings.enabled %}
+<div class="messagelist"><div class="warning">{% trans "Issue management requires SENTRY_ORG_SLUG and SENTRY_AUTH_TOKEN in addition to SENTRY_DSN." %}</div></div>
+{% endif %}
+{% endblock %}

@@ -86,6 +86,12 @@ THIRD_PARTY_SHARED_APPS = [
     "django_tenants",
     "tenant_users.tenants",
     "tenant_users.permissions",
+    "dj_control_room_base",
+    "dj_redis_panel",
+    "dj_cache_panel",
+    "dj_urls_panel",
+    "dj_celery_panel",
+    "dj_control_room",
     "django_tailwind_cli",
     "django_cotton",
     "crispy_forms",
@@ -112,6 +118,7 @@ THIRD_PARTY_TENANT_APPS = [
 LOCAL_SHARED_APPS = [
     "django_template.tenants",
     "django_template.users",
+    "django_template.controlroom_sentry",
 ]
 LOCAL_TENANT_APPS: list[str] = []
 
@@ -303,6 +310,19 @@ LOGGING = {
 
 REDIS_URL = env("REDIS_URL", default="redis://redis:6379/0")
 REDIS_SSL = REDIS_URL.startswith("rediss://")
+
+# Django Control Room
+# ------------------------------------------------------------------------------
+DJ_CONTROL_ROOM_SETTINGS = {
+    "REGISTER_PANELS_IN_ADMIN": env.bool("CR_REGISTER_PANELS", default=False),
+    "PANEL_ADMIN_REGISTRATION": {
+        "dj_redis_panel": env.bool("CR_REGISTER_REDIS_PANEL", default=False),
+        "dj_cache_panel": env.bool("CR_REGISTER_CACHE_PANEL", default=False),
+        "dj_urls_panel": env.bool("CR_REGISTER_URLS_PANEL", default=False),
+        "dj_celery_panel": env.bool("CR_REGISTER_CELERY_PANEL", default=False),
+        "controlroom_sentry": env.bool("CR_REGISTER_SENTRY_PANEL", default=False),
+    },
+}
 
 # Celery
 # ------------------------------------------------------------------------------

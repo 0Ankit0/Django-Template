@@ -10,6 +10,8 @@ from drf_spectacular.views import SpectacularAPIView
 from drf_spectacular.views import SpectacularSwaggerView
 from rest_framework.authtoken.views import obtain_auth_token
 
+admin_base = settings.ADMIN_URL.rstrip("/") + "/"
+
 urlpatterns = [
     path("", TemplateView.as_view(template_name="pages/home.html"), name="home"),
     path(
@@ -22,6 +24,12 @@ urlpatterns = [
         TemplateView.as_view(template_name="pages/components.html"),
         name="components",
     ),
+    path(f"{admin_base}dj-redis-panel/", include("dj_redis_panel.urls")),
+    path(f"{admin_base}dj-cache-panel/", include("dj_cache_panel.urls")),
+    path(f"{admin_base}dj-urls-panel/", include("dj_urls_panel.urls")),
+    path(f"{admin_base}dj-celery-panel/", include("dj_celery_panel.urls")),
+    path(f"{admin_base}sentry-panel/", include("django_template.controlroom_sentry.urls")),
+    path(f"{admin_base}dj-control-room/", include("dj_control_room.urls")),
     # Django Admin, use {% url 'admin:index' %}
     path(settings.ADMIN_URL, admin.site.urls),
     # User management

@@ -11,6 +11,7 @@ License: Apache Software License 2.0
 - Global user identities + tenant permissions via django-tenant-users
 - Celery + Redis
 - DRF + drf-spectacular
+- Django Control Room with Redis, cache, URLs, Celery, and custom Sentry panels
 - Tailwind CSS via django-tailwind-cli + django-cotton + shadcn-django components
 
 ## Local Development
@@ -117,6 +118,48 @@ It also includes instant search and category filters to quickly find components 
 - Sign up through the allauth flow.
 - Email is the login identifier.
 - Tenant access is enforced by middleware.
+
+## Operations Dashboard
+
+This project integrates Django Control Room with the official panels that match the current stack, plus a custom Sentry panel:
+
+- `dj_redis_panel`
+- `dj_cache_panel`
+- `dj_urls_panel`
+- `dj_celery_panel`
+- `controlroom_sentry`
+
+The custom Sentry panel supports the main day-to-day issue operations backed by the Sentry API:
+
+- issue list and issue detail views
+- status updates
+- assignment updates
+- priority updates
+- subscribe and unsubscribe
+- bookmark and seen state updates
+- review inbox state updates
+
+Local development exposes the panels in both Django admin and the Control Room dashboard by default.
+Production keeps panel registration disabled by default unless explicitly enabled with environment variables.
+
+Default local dashboard routes:
+
+- `/admin/dj-control-room/`
+- `/admin/dj-redis-panel/`
+- `/admin/dj-cache-panel/`
+- `/admin/dj-urls-panel/`
+- `/admin/dj-celery-panel/`
+- `/admin/sentry-panel/`
+
+If `DJANGO_ADMIN_URL` is customized, the same suffixes are mounted under that configured admin prefix.
+
+Sentry API-backed issue management requires these environment variables:
+
+- `SENTRY_API_BASE_URL`
+- `SENTRY_ORG_SLUG`
+- `SENTRY_AUTH_TOKEN`
+- `SENTRY_PROJECT_SLUG` (optional default project filter)
+- `SENTRY_DEFAULT_ISSUES_QUERY` (optional default issue stream query)
 
 ## Commands
 

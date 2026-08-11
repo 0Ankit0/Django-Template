@@ -1,0 +1,78 @@
+{% extends "admin/controlroom_sentry/base.html" %}
+{% load i18n dcr_icons %}
+
+{% block panel_content %}
+<div class="dcr-page-header">
+  <div class="dcr-page-header__main">
+    <div class="dcr-page-header__icon dcr-icon-color--danger">{% dcr_icon "database" %}</div>
+    <div class="dcr-page-header__body">
+      <h1 class="dcr-page-header__title">{% trans "Sentry Issues" %}</h1>
+      <p class="dcr-page-header__subtitle">{% trans "Review the current issue stream and jump into issue-level actions for status, assignment, priority, and subscriptions." %}</p>
+    </div>
+  </div>
+</div>
+
+{% if not api_settings.enabled %}
+<div class="messagelist"><div class="warning">{% trans "Configure SENTRY_ORG_SLUG and SENTRY_AUTH_TOKEN to enable issue management." %}</div></div>
+{% endif %}
+
+{% if error_message %}
+<div class="messagelist"><div class="error">{{ error_message }}</div></div>
+{% endif %}
+
+<form method="get" class="dcr-form-card">
+  <div class="form-row">
+    <label for="id_query">{% trans "Query" %}</label>
+    <input id="id_query" type="text" name="query" value="{{ selected_query }}" placeholder="is:unresolved" />
+  </div>
+  <div class="form-row">
+    <label for="id_project">{% trans "Project Slug" %}</label>
+    <input id="id_project" type="text" name="project" value="{{ selected_project }}" placeholder="Leave blank for all accessible projects" />
+  </div>
+  <div class="submit-row">
+    <button type="submit" class="default">{% trans "Load Issues" %}</button>
+    <a class="button" href="{% url 'controlroom_sentry:index' %}">{% trans "Back" %}</a>
+  </div>
+</form>
+
+{% if issues %}
+<div class="dcr-data-table dcr-mt-lg">
+  <div class="dcr-data-table__header">
+    <div class="dcr-data-table__header-info">
+      <h3 class="dcr-data-table__title">{% trans "Issues" %}</h3>
+    </div>
+  </div>
+  <div class="dcr-data-table__scroll">
+    <table>
+      <thead>
+        <tr>
+          <th>{% trans "Issue" %}</th>
+          <th>{% trans "Project" %}</th>
+          <th>{% trans "Status" %}</th>
+          <th>{% trans "Priority" %}</th>
+          <th>{% trans "Assigned" %}</th>
+          <th>{% trans "Events" %}</th>
+          <th>{% trans "Users" %}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for issue in issues %}
+        <tr>
+          <td>
+            <a href="{% url 'controlroom_sentry:issue_detail' issue.id %}" class="dcr-data-table__link">{{ issue.title|default:issue.shortId }}</a>
+            <div class="dcr-text-muted dcr-text-sm">{{ issue.shortId }} · {{ issue.level }}</div>
+          </td>
+          <td>{{ issue.project.slug|default:"-" }}</td>
+          <td>{{ issue.status }}</td>
+          <td>{{ issue.priority|default:"-" }}</td>
+          <td>{% if issue.assignedTo %}{{ issue.assignedTo.name|default:issue.assignedTo.email|default:issue.assignedTo.id }}{% else %}-{% endif %}</td>
+          <td>{{ issue.count }}</td>
+          <td>{{ issue.userCount }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

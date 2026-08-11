@@ -1,0 +1,55 @@
+{% extends "admin/controlroom_sentry/base.html" %}
+{% load i18n dcr_icons %}
+
+{% block panel_content %}
+<div class="dcr-page-header">
+  <div class="dcr-page-header__main">
+    <div class="dcr-page-header__icon dcr-icon-color--danger">{% dcr_icon "alert" %}</div>
+    <div class="dcr-page-header__body">
+      <div class="dcr-page-header__title-row">
+        <h1 class="dcr-page-header__title">{% trans "Sentry Overview" %}</h1>
+        <span class="dcr-badge">{% if overview.sdk_initialized %}{% trans "ACTIVE" %}{% else %}{% trans "NOT CONFIGURED" %}{% endif %}</span>
+      </div>
+      <p class="dcr-page-header__subtitle">{% trans "Review SDK status, environment, and runtime configuration without leaving Django admin." %}</p>
+    </div>
+  </div>
+</div>
+
+<div class="dcr-grid dcr-grid--3">
+  <div class="dcr-stat-card"><span class="dcr-stat-card__label">{% trans "DSN" %}</span><strong class="dcr-stat-card__value">{{ overview.dsn_masked }}</strong></div>
+  <div class="dcr-stat-card"><span class="dcr-stat-card__label">{% trans "Environment" %}</span><strong class="dcr-stat-card__value">{{ overview.environment }}</strong></div>
+  <div class="dcr-stat-card"><span class="dcr-stat-card__label">{% trans "Integrations" %}</span><strong class="dcr-stat-card__value">{{ overview.active_integrations }}/{{ overview.expected_integrations }}</strong></div>
+</div>
+
+<div class="dcr-data-table dcr-mt-lg">
+  <div class="dcr-data-table__header">
+    <div class="dcr-data-table__header-info">
+      <h3 class="dcr-data-table__title">{% trans "Runtime Configuration" %}</h3>
+    </div>
+  </div>
+  <div class="dcr-data-table__scroll">
+    <table>
+      <tbody>
+        <tr><th>{% trans "SDK Initialized" %}</th><td>{{ overview.sdk_initialized }}</td></tr>
+        <tr><th>{% trans "Release" %}</th><td>{{ overview.release }}</td></tr>
+        <tr><th>{% trans "Server Name" %}</th><td>{{ overview.server_name }}</td></tr>
+        <tr><th>{% trans "Transport" %}</th><td>{{ overview.transport }}</td></tr>
+        <tr><th>{% trans "Trace Sample Rate" %}</th><td>{{ overview.traces_sample_rate }}</td></tr>
+        <tr><th>{% trans "Configured DSN" %}</th><td>{{ runtime_settings.sentry_dsn }}</td></tr>
+        <tr><th>{% trans "Sentry API" %}</th><td>{{ overview.api_base_url }}</td></tr>
+        <tr><th>{% trans "Organization Slug" %}</th><td>{{ overview.org_slug|default:"Not configured" }}</td></tr>
+        <tr><th>{% trans "Default Project" %}</th><td>{{ overview.project_slug }}</td></tr>
+        <tr><th>{% trans "API Token" %}</th><td>{{ overview.api_token }}</td></tr>
+        <tr><th>{% trans "Redis URL" %}</th><td>{{ runtime_settings.redis_url }}</td></tr>
+        <tr><th>{% trans "Celery Broker" %}</th><td>{{ runtime_settings.celery_broker_url }}</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div class="dcr-actions dcr-mt-lg">
+  <a class="button" href="{% url 'controlroom_sentry:integrations' %}">{% trans "View Integrations" %}</a>
+  <a class="button" href="{% url 'controlroom_sentry:issues' %}">{% trans "Manage Issues" %}</a>
+  <a class="button default" href="{% url 'controlroom_sentry:test_event' %}">{% trans "Send Test Event" %}</a>
+</div>
+{% endblock %}

@@ -53,7 +53,6 @@ services:
     ports:
       - '0.0.0.0:80:80'
       - '0.0.0.0:443:443'
-      - '0.0.0.0:5555:5555'
 
   redis:
     image: docker.io/redis:7.2
@@ -77,11 +76,6 @@ services:
     <<: *django
     image: django_template_production_celerybeat
     command: /start-celerybeat
-
-  flower:
-    <<: *django
-    image: django_template_production_flower
-    command: /start-flower
 
   awscli:
     build:

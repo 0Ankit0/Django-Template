@@ -9,6 +9,7 @@ from sentry_sdk.integrations.redis import RedisIntegration
 
 from .base import *  # noqa: F403
 from .base import DATABASES
+from .base import DJ_CONTROL_ROOM_SETTINGS
 from .base import INSTALLED_APPS
 from .base import REDIS_URL
 from .base import SPECTACULAR_SETTINGS
@@ -167,6 +168,20 @@ COMPRESS_FILTERS = {
     "js": ["compressor.filters.jsmin.JSMinFilter"],
 }
 
+# Django Control Room
+# ------------------------------------------------------------------------------
+DJ_CONTROL_ROOM_SETTINGS = {
+    **DJ_CONTROL_ROOM_SETTINGS,
+    "REGISTER_PANELS_IN_ADMIN": env.bool("CR_REGISTER_PANELS", default=False),
+    "PANEL_ADMIN_REGISTRATION": {
+        "dj_redis_panel": env.bool("CR_REGISTER_REDIS_PANEL", default=False),
+        "dj_cache_panel": env.bool("CR_REGISTER_CACHE_PANEL", default=False),
+        "dj_urls_panel": env.bool("CR_REGISTER_URLS_PANEL", default=False),
+        "dj_celery_panel": env.bool("CR_REGISTER_CELERY_PANEL", default=False),
+        "controlroom_sentry": env.bool("CR_REGISTER_SENTRY_PANEL", default=False),
+    },
+}
+
 # LOGGING
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#logging
@@ -209,6 +224,11 @@ LOGGING = {
 # ------------------------------------------------------------------------------
 SENTRY_DSN = env("SENTRY_DSN")
 SENTRY_LOG_LEVEL = env.int("DJANGO_SENTRY_LOG_LEVEL", logging.INFO)
+SENTRY_API_BASE_URL = env("SENTRY_API_BASE_URL", default="https://sentry.io/api/0")
+SENTRY_ORG_SLUG = env("SENTRY_ORG_SLUG", default="")
+SENTRY_PROJECT_SLUG = env("SENTRY_PROJECT_SLUG", default="")
+SENTRY_AUTH_TOKEN = env("SENTRY_AUTH_TOKEN", default="")
+SENTRY_DEFAULT_ISSUES_QUERY = env("SENTRY_DEFAULT_ISSUES_QUERY", default="is:unresolved")
 
 sentry_logging = LoggingIntegration(
     level=SENTRY_LOG_LEVEL,  # Capture info and above as breadcrumbs
