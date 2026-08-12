@@ -54,6 +54,10 @@ COPY ./compose/local/django/start /start
 RUN sed -i 's/\r$//g' /start
 RUN chmod +x /start
 
+COPY ./compose/local/django/start-migrations /start-migrations
+RUN sed -i 's/\r$//g' /start-migrations
+RUN chmod +x /start-migrations
+
 COPY ./compose/local/django/start-tailwind /start-tailwind
 RUN sed -i 's/\r$//g' /start-tailwind
 RUN chmod +x /start-tailwind

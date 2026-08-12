@@ -54,6 +54,12 @@ Or:
 
     just runserver
 
+`docker compose up` runs a one-shot local bootstrap service before Django,
+Tailwind, Celery worker, and Celery Beat start. It applies shared migrations,
+creates the `public` tenant for `localhost` if it does not exist, and then
+migrates tenant schemas. Set `DJANGO_PUBLIC_TENANT_OWNER_EMAIL` in
+`.envs/.local/.django` to choose the initial public tenant owner.
+
 For local tenant routing, use domains under .localhost such as acme.localhost.
 
 ## UI Components (django-cotton + shadcn-django)
