@@ -28,6 +28,7 @@ urlpatterns = [
     path(f"{admin_base}dj-cache-panel/", include("dj_cache_panel.urls")),
     path(f"{admin_base}dj-urls-panel/", include("dj_urls_panel.urls")),
     path(f"{admin_base}dj-celery-panel/", include("dj_celery_panel.urls")),
+    path(f"{admin_base}dj-signals-panel/", include("dj_signals_panel.urls")),
     path(f"{admin_base}sentry-panel/", include("django_template.controlroom_sentry.urls")),
     path(f"{admin_base}dj-control-room/", include("dj_control_room.urls")),
     # Django Admin, use {% url 'admin:index' %}

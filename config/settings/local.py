@@ -1,3 +1,5 @@
+from urllib.parse import urlparse
+
 from .base import *  # noqa: F403
 from .base import DJ_CONTROL_ROOM_SETTINGS
 from .base import INSTALLED_APPS
@@ -80,11 +82,36 @@ DJ_CONTROL_ROOM_SETTINGS = {
         "dj_redis_panel": env.bool("CR_REGISTER_REDIS_PANEL", default=True),
         "dj_cache_panel": env.bool("CR_REGISTER_CACHE_PANEL", default=True),
         "dj_urls_panel": env.bool("CR_REGISTER_URLS_PANEL", default=True),
+        "dj_signals_panel": env.bool("CR_REGISTER_SIGNALS_PANEL", default=True),
         "dj_celery_panel": env.bool("CR_REGISTER_CELERY_PANEL", default=True),
         "controlroom_sentry": env.bool("CR_REGISTER_SENTRY_PANEL", default=True),
     },
 }
-
+REDIS_URL = env.str("REDIS_URL", default="redis://redis:6379/0") 
+redis_url = urlparse(url=REDIS_URL) 
+DJ_REDIS_PANEL_SETTINGS = {
+     "ALLOW_KEY_DELETE": False, 
+     "ALLOW_KEY_EDIT": False, 
+     "ALLOW_TTL_UPDATE": False, 
+     "CURSOR_PAGINATED_SCAN": False, 
+     "CURSOR_PAGINATED_COLLECTIONS": False, 
+     "socket_timeout": 5.0, 
+     "socket_connect_timeout": 5.0, 
+     "INSTANCES": { 
+         "local_redis": { 
+             "description": "Local Redis Instance", 
+             "host": redis_url.hostname or "redis", 
+             "port": redis_url.port or 6379, 
+             "features": { 
+                 "ALLOW_KEY_DELETE": True, 
+                 "ALLOW_KEY_EDIT": True, 
+                 "ALLOW_TTL_UPDATE": True, 
+                 "CURSOR_PAGINATED_SCAN": True, 
+                 "CURSOR_PAGINATED_COLLECTIONS": True, 
+            }, 
+        }, 
+    }, 
+}
 # Celery
 # ------------------------------------------------------------------------------
 

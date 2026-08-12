@@ -7,5 +7,5 @@ set -o nounset
 
 python manage.py migrate_schemas --shared
 python manage.py migrate_schemas
-python manage.py tailwind build
+
 exec uvicorn config.asgi:application --host 0.0.0.0 --reload --reload-include '*.html'

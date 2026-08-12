@@ -48,7 +48,16 @@ LOCALE_PATHS = [str(BASE_DIR / "locale")]
 # ------------------------------------------------------------------------------
 # https://docs.djangoproject.com/en/dev/ref/settings/#databases
 
-DATABASES = {"default": env.db("DATABASE_URL")}
+DATABASES = {
+    "default": {
+        "ENGINE": "django_tenants.postgresql_backend",
+        "NAME": env("POSTGRES_DB"),
+        "USER": env("POSTGRES_USER"),
+        "PASSWORD": env("POSTGRES_PASSWORD"),
+        "HOST": env("POSTGRES_HOST"),
+        "PORT": env("POSTGRES_PORT", default="5432"),
+    }
+}
 DATABASES["default"]["ATOMIC_REQUESTS"] = True
 DATABASES["default"]["ENGINE"] = "django_tenants.postgresql_backend"
 DATABASE_ROUTERS = ("django_tenants.routers.TenantSyncRouter",)
@@ -92,6 +101,7 @@ THIRD_PARTY_SHARED_APPS = [
     "dj_urls_panel",
     "dj_celery_panel",
     "dj_control_room",
+    "dj_signals_panel",
     "django_tailwind_cli",
     "django_cotton",
     "crispy_forms",
@@ -102,15 +112,16 @@ THIRD_PARTY_SHARED_APPS = [
     "allauth.mfa",
     "allauth.socialaccount",
     "corsheaders",
+
+    "django_celery_beat",
 ]
 THIRD_PARTY_TENANT_APPS = [
     "tenant_users.permissions",
     "django_cotton",
     "crispy_forms",
     "crispy_bootstrap5",
-    "django_celery_beat",
     "rest_framework",
-    "rest_framework.authtoken",
+    # "rest_framework.authtoken",
     "corsheaders",
     "drf_spectacular",
 ]
