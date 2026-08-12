@@ -5,6 +5,8 @@ set -o pipefail
 set -o nounset
 
 
+uv sync --locked
+
 python manage.py migrate_schemas --shared
 
 if ! python manage.py shell -c '
