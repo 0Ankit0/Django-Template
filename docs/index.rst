@@ -13,7 +13,8 @@ Welcome to django-template's documentation!
    howto
    docker
    users
-
+   billing
+   billing-test-credentials
 
 
 Indices and tables
