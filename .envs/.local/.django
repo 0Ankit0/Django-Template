@@ -21,9 +21,23 @@ SENTRY_DEFAULT_ISSUES_QUERY=is:unresolved
 
 # Stripe test mode
 # ------------------------------------------------------------------------------
+BILLING_STRIPE_ENABLED=True
 STRIPE_SECRET_KEY=
 STRIPE_PUBLISHABLE_KEY=
 STRIPE_WEBHOOK_SECRET=
+
+# Khalti sandbox
+# ------------------------------------------------------------------------------
+BILLING_KHALTI_ENABLED=True
+KHALTI_SECRET_KEY=
+KHALTI_ENVIRONMENT=sandbox
+
+# eSewa sandbox
+# ------------------------------------------------------------------------------
+BILLING_ESEWA_ENABLED=True
+ESEWA_PRODUCT_CODE=EPAYTEST
+ESEWA_SECRET_KEY=
+ESEWA_ENVIRONMENT=sandbox
 
 # Redis
 # ------------------------------------------------------------------------------
@@ -31,4 +45,3 @@ REDIS_URL=redis://redis:6379/0
 
 # Celery
 # ------------------------------------------------------------------------------
-
