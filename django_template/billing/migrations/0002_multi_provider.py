@@ -4,12 +4,12 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
     dependencies = [("billing", "0001_initial")]
-
     operations = [
         migrations.RemoveConstraint(model_name="price", name="billing_price_interval_count_positive"),
         migrations.RenameField(model_name="price", old_name="provider_price_id", new_name="stripe_price_id"),
         migrations.RemoveField(model_name="product", name="provider"),
         migrations.RemoveField(model_name="product", name="provider_product_id"),
+        migrations.AddField(model_name="product", name="stripe_product_id", field=models.CharField(blank=True, editable=False, max_length=255)),
         migrations.RemoveField(model_name="price", name="provider"),
         migrations.AddField(model_name="billingcustomer", name="provider", field=models.CharField(choices=[("stripe", "Stripe"), ("khalti", "Khalti"), ("esewa", "eSewa")], default="stripe", max_length=32)),
         migrations.AlterField(model_name="billingcustomer", name="tenant", field=models.ForeignKey(on_delete=django.db.models.deletion.PROTECT, related_name="billing_customers", to="tenants.tenant")),
