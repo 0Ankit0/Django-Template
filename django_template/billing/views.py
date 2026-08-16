@@ -12,9 +12,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET
 from django.views.decorators.http import require_POST
 
+from .checkout import create_checkout_session
 from .models import Price
 from .services import cancel_subscription
-from .services import create_checkout_session
 from .services import create_portal_session
 from .services import get_current_subscription
 from .services import handle_webhook
@@ -54,6 +54,9 @@ def checkout(request: HttpRequest, price_id: int) -> HttpResponse:
     if price.is_recurring and get_current_subscription(request.tenant):
         messages.info(request, "Your tenant already has an active subscription. Use the billing portal to change it.")
         return redirect("billing:dashboard")
+    if not price.provider_price_id:
+        messages.error(request, "This price has not been synchronized to Stripe yet.")
+        return redirect("billing:pricing")
     session = create_checkout_session(request, price)
     return redirect(session.url)
 
