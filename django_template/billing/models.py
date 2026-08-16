@@ -5,13 +5,17 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
+class Provider(models.TextChoices):
+    STRIPE = "stripe", _("Stripe")
+    KHALTI = "khalti", _("Khalti")
+    ESEWA = "esewa", _("eSewa")
+
+
 class Product(models.Model):
     name = models.CharField(_("Name"), max_length=255)
     slug = models.SlugField(_("Slug"), unique=True)
     description = models.TextField(_("Description"), blank=True)
     active = models.BooleanField(_("Active"), default=True)
-    provider = models.CharField(max_length=32, default="stripe", editable=False)
-    provider_product_id = models.CharField(max_length=255, blank=True, editable=False)
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -31,27 +35,18 @@ class Price(models.Model):
 
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="prices")
     nickname = models.CharField(max_length=255, blank=True)
-    amount = models.PositiveBigIntegerField(
-        validators=[MinValueValidator(0)],
-        help_text=_("Amount in the smallest currency unit, e.g. cents."),
-    )
-    currency = models.CharField(max_length=3, default="usd")
+    amount = models.PositiveBigIntegerField(validators=[MinValueValidator(0)], help_text=_("Amount in the smallest currency unit."))
+    currency = models.CharField(max_length=3, default="npr")
     interval = models.CharField(max_length=20, choices=Interval.choices, default=Interval.MONTH)
     interval_count = models.PositiveIntegerField(default=1)
     active = models.BooleanField(default=True)
-    provider = models.CharField(max_length=32, default="stripe", editable=False)
-    provider_price_id = models.CharField(max_length=255, blank=True, editable=False)
+    stripe_price_id = models.CharField(max_length=255, blank=True, editable=False)
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["product__name", "amount"]
-        constraints = [
-            models.CheckConstraint(
-                condition=models.Q(interval_count__gte=1),
-                name="billing_price_interval_count_positive",
-            ),
-        ]
+        constraints = [models.CheckConstraint(condition=models.Q(interval_count__gte=1), name="billing_price_interval_count_positive")]
 
     @property
     def is_recurring(self) -> bool:
@@ -85,26 +80,26 @@ class ProductFeature(models.Model):
     enabled = models.BooleanField(default=True)
 
     class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["product", "feature"], name="billing_product_feature_unique"),
-        ]
+        constraints = [models.UniqueConstraint(fields=["product", "feature"], name="billing_product_feature_unique")]
 
     def __str__(self) -> str:
         return f"{self.product}: {self.feature}"
 
 
 class BillingCustomer(models.Model):
-    tenant = models.OneToOneField(
-        "tenants.Tenant",
-        on_delete=models.PROTECT,
-        related_name="billing_customer",
-    )
-    provider = models.CharField(max_length=32, default="stripe", editable=False)
-    provider_customer_id = models.CharField(max_length=255, unique=True)
+    tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="billing_customers")
+    provider = models.CharField(max_length=32, choices=Provider.choices)
+    provider_customer_id = models.CharField(max_length=255)
     email = models.EmailField(blank=True)
     name = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(fields=["tenant", "provider"], name="billing_customer_tenant_provider_unique"),
+            models.UniqueConstraint(fields=["provider", "provider_customer_id"], name="billing_customer_provider_id_unique"),
+        ]
 
     def __str__(self) -> str:
         return self.name or self.email or str(self.tenant)
@@ -113,7 +108,6 @@ class BillingCustomer(models.Model):
 class Subscription(models.Model):
     class Status(models.TextChoices):
         INCOMPLETE = "incomplete", _("Incomplete")
-        INCOMPLETE_EXPIRED = "incomplete_expired", _("Incomplete expired")
         TRIALING = "trialing", _("Trialing")
         ACTIVE = "active", _("Active")
         PAST_DUE = "past_due", _("Past due")
@@ -124,8 +118,8 @@ class Subscription(models.Model):
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="subscriptions")
     price = models.ForeignKey(Price, on_delete=models.PROTECT, related_name="subscriptions")
     status = models.CharField(max_length=32, choices=Status.choices)
-    provider = models.CharField(max_length=32, default="stripe", editable=False)
-    provider_subscription_id = models.CharField(max_length=255, unique=True)
+    provider = models.CharField(max_length=32, choices=Provider.choices)
+    provider_subscription_id = models.CharField(max_length=255)
     provider_customer_id = models.CharField(max_length=255, blank=True)
     current_period_start = models.DateTimeField(null=True, blank=True)
     current_period_end = models.DateTimeField(null=True, blank=True)
@@ -138,10 +132,8 @@ class Subscription(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
-        indexes = [
-            models.Index(fields=["tenant", "status"]),
-            models.Index(fields=["provider_customer_id"]),
-        ]
+        constraints = [models.UniqueConstraint(fields=["provider", "provider_subscription_id"], name="billing_subscription_provider_id_unique")]
+        indexes = [models.Index(fields=["tenant", "status"]), models.Index(fields=["provider", "provider_customer_id"])]
 
     def __str__(self) -> str:
         return f"{self.tenant} - {self.price.product} ({self.status})"
@@ -156,18 +148,12 @@ class Payment(models.Model):
         PARTIALLY_REFUNDED = "partially_refunded", _("Partially refunded")
 
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="payments")
-    subscription = models.ForeignKey(
-        Subscription,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="payments",
-    )
+    subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True, blank=True, related_name="payments")
     amount = models.PositiveBigIntegerField()
     currency = models.CharField(max_length=3)
     status = models.CharField(max_length=32, choices=Status.choices)
-    provider = models.CharField(max_length=32, default="stripe", editable=False)
-    provider_payment_id = models.CharField(max_length=255, unique=True)
+    provider = models.CharField(max_length=32, choices=Provider.choices)
+    provider_payment_id = models.CharField(max_length=255)
     provider_invoice_id = models.CharField(max_length=255, blank=True)
     paid_at = models.DateTimeField(null=True, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
@@ -176,6 +162,7 @@ class Payment(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [models.UniqueConstraint(fields=["provider", "provider_payment_id"], name="billing_payment_provider_id_unique")]
         indexes = [models.Index(fields=["tenant", "status"])]
 
     def __str__(self) -> str:
@@ -189,20 +176,16 @@ class Invoice(models.Model):
         PAID = "paid", _("Paid")
         VOID = "void", _("Void")
         UNCOLLECTIBLE = "uncollectible", _("Uncollectible")
+
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="billing_invoices")
-    subscription = models.ForeignKey(
-        Subscription,
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        related_name="invoices",
-    )
-    provider_invoice_id = models.CharField(max_length=255, unique=True)
+    subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True, blank=True, related_name="invoices")
+    provider = models.CharField(max_length=32, choices=Provider.choices)
+    provider_invoice_id = models.CharField(max_length=255)
     number = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=32, choices=Status.choices)
     amount_due = models.PositiveBigIntegerField(default=0)
     amount_paid = models.PositiveBigIntegerField(default=0)
-    currency = models.CharField(max_length=3, default="usd")
+    currency = models.CharField(max_length=3, default="npr")
     hosted_invoice_url = models.URLField(blank=True)
     invoice_pdf = models.URLField(blank=True)
     period_start = models.DateTimeField(null=True, blank=True)
@@ -214,6 +197,7 @@ class Invoice(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [models.UniqueConstraint(fields=["provider", "provider_invoice_id"], name="billing_invoice_provider_id_unique")]
 
     def __str__(self) -> str:
         return self.number or self.provider_invoice_id
@@ -226,7 +210,8 @@ class CheckoutSession(models.Model):
 
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="checkout_sessions")
     price = models.ForeignKey(Price, on_delete=models.PROTECT, related_name="checkout_sessions")
-    provider_session_id = models.CharField(max_length=255, unique=True)
+    provider = models.CharField(max_length=32, choices=Provider.choices)
+    provider_session_id = models.CharField(max_length=255)
     mode = models.CharField(max_length=32, choices=Mode.choices)
     status = models.CharField(max_length=32, default="open")
     url = models.URLField(blank=True)
@@ -236,14 +221,15 @@ class CheckoutSession(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [models.UniqueConstraint(fields=["provider", "provider_session_id"], name="billing_checkout_provider_id_unique")]
 
     def __str__(self) -> str:
         return self.provider_session_id
 
 
 class WebhookEvent(models.Model):
-    provider = models.CharField(max_length=32, default="stripe")
-    event_id = models.CharField(max_length=255, unique=True)
+    provider = models.CharField(max_length=32, choices=Provider.choices)
+    event_id = models.CharField(max_length=255)
     event_type = models.CharField(max_length=255)
     payload = models.JSONField()
     processed = models.BooleanField(default=False)
@@ -253,7 +239,8 @@ class WebhookEvent(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [models.UniqueConstraint(fields=["provider", "event_id"], name="billing_webhook_provider_event_unique")]
         indexes = [models.Index(fields=["event_type", "processed"])]
 
     def __str__(self) -> str:
-        return f"{self.event_type}: {self.event_id}"
+        return f"{self.provider}: {self.event_type}: {self.event_id}"
