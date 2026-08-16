@@ -1,4 +1,5 @@
-from allauth.account.decorators import secure_admin_login
+from allauth.account.decorators import  secure_admin_login
+from unfold.admin import ModelAdmin
 from django.conf import settings
 from django.contrib import admin
 from django.contrib.auth import admin as auth_admin
@@ -14,15 +15,15 @@ if settings.DJANGO_ADMIN_FORCE_ALLAUTH:
     admin.autodiscover()
     admin.site.login = secure_admin_login(admin.site.login)  # type: ignore[method-assign]
 
-
 @admin.register(User)
-class UserAdmin(auth_admin.UserAdmin):
+class UserAdmin(ModelAdmin,auth_admin.UserAdmin):
     form = UserAdminChangeForm
     add_form = UserAdminCreationForm
     filter_horizontal: tuple[str, ...] = ()
     add_fieldsets = (
         (None, {"classes": ("wide",), "fields": ("email", "password1", "password2")}),
     )
+    readonly_fields = ("last_login","is_verified")
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         (_("Personal info"), {"fields": ("name",)}),

@@ -34,6 +34,7 @@ dependencies = [
   "django-tailwind-cli>=4.6.2",
   "django-tenant-users>=2.2.1",
   "django-tenants>=3.10.2",
+  "django-unfold>=0.104.1",
   "djangorestframework==3.17.1",
   "drf-spectacular==0.30.0",
   "gunicorn==26.0.0",

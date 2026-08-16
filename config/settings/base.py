@@ -1,5 +1,7 @@
 # ruff: noqa: ERA001, E501
 """Base settings to build other settings files upon."""
+from django.urls import reverse_lazy
+from django.utils.translation import gettext_lazy as _
 
 import ssl
 from pathlib import Path
@@ -88,6 +90,7 @@ DJANGO_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     # "django.contrib.humanize", # Handy template tags
+    "unfold",
     "django.contrib.admin",
     "django.forms",
 ]
@@ -421,5 +424,26 @@ SPECTACULAR_SETTINGS = {
     "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAdminUser"],
     "SCHEMA_PATH_PREFIX": "/api/",
 }
-# Your stuff...
 # ------------------------------------------------------------------------------
+# Django Unfold 
+UNFOLD = {
+    "SIDEBAR": {
+        "show_search": True,
+        "show_all_applications": True,
+    },
+    "SITE_DROPDOWN": [
+        {
+            "icon": "diamond",
+            "title": _("My site"),
+            "link": "https://example.com",
+            "attrs": {
+                "target": "_blank",
+            },
+        },
+        {
+            "icon": "diamond",
+            "title": _("My site"),
+            "link": reverse_lazy("admin:index"),
+        },
+    ]
+}

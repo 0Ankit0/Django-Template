@@ -952,6 +952,7 @@ dependencies = [
     { name = "django-tailwind-cli" },
     { name = "django-tenant-users" },
     { name = "django-tenants" },
+    { name = "django-unfold" },
     { name = "djangorestframework" },
     { name = "drf-spectacular" },
     { name = "gunicorn" },
@@ -1015,6 +1016,7 @@ requires-dist = [
     { name = "django-tailwind-cli", specifier = ">=4.6.2" },
     { name = "django-tenant-users", specifier = ">=2.2.1" },
     { name = "django-tenants", specifier = ">=3.10.2" },
+    { name = "django-unfold", specifier = ">=0.104.1" },
     { name = "djangorestframework", specifier = "==3.17.1" },
     { name = "drf-spectacular", specifier = "==0.30.0" },
     { name = "gunicorn", specifier = "==26.0.0" },
@@ -1104,6 +1106,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/e3/f3/6165a27205ad24dab25f9dd527816df71b7b60920d7b480cb15d307187a3/django_typer-3.8.0.tar.gz", hash = "sha256:8fedd0aa684f43e23013831ad614a31a800ea8cb080a63b166b6af0bdfa0bd69", size = 2984323, upload-time = "2026-08-08T15:00:32.592Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/49/9a/a3c2bb405f3fcd695b2da762c273800a0e46d8b36eb38454e8cbf6d3355a/django_typer-3.8.0-py3-none-any.whl", hash = "sha256:332c885f74d7fb3ed2a35b92f8791baa61db6b238245528d6a9ee7f4e24ddbf7", size = 297345, upload-time = "2026-08-08T15:00:30.755Z" },
+]
+
+[[package]]
+name = "django-unfold"
+version = "0.104.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "django" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/12/41/0685cfdad4cf77a571e48227c78a9b8ae6d15679c2e9c9e724142a26cc3a/django_unfold-0.104.1.tar.gz", hash = "sha256:13b52e8100f2d844568cf08a2057cacd3686bc1083e0e491d05fc688025c966f", size = 1126154, upload-time = "2026-08-12T07:43:46.027Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/37/25/d9165c8b4e1deb37d0ac68bfe837c59a4ddb895f5df8b9c97b4bd433ab23/django_unfold-0.104.1-py3-none-any.whl", hash = "sha256:4eece526e1e80f5133632acae260cc53ab2f52020ff9f64bb98d9c9c738d9888", size = 1254159, upload-time = "2026-08-12T07:43:44.565Z" },
 ]
 
 [[package]]

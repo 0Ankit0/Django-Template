@@ -71,34 +71,38 @@ add-shadcn-allauth:
 # build: Build python image.
 build *args:
     @echo "Building python image..."
-    @docker compose build {{args}}
+    @docker-compose build {{args}}
 
 # up: Start up containers.
 up:
     @echo "Starting up containers..."
-    @docker compose up -d --remove-orphans
+    @docker-compose up -d --remove-orphans
 
 # down: Stop containers.
 down:
     @echo "Stopping containers..."
-    @docker compose down
+    @docker-compose down
 
 # prune: Remove containers and their volumes.
 prune *args:
     @echo "Killing containers and removing volumes..."
-    @docker compose down -v {{args}}
+    @docker-compose down -v {{args}}
+
+restart *args:
+    @echo "Restarting the provided docker service..."
+    @docker-compose restart {{args}}
 
 # logs: View container logs
 logs *args:
-    @docker compose logs -f {{args}}
+    @docker-compose logs -f {{args}}
 
 # manage: Executes `manage.py` command.
 manage +args:
-    @docker compose run --rm django python ./manage.py {{args}}
+    @docker-compose run --rm django python ./manage.py {{args}}
 
 # pytest: Run tests with pytest.
 pytest *args:
-    @docker compose run --rm django pytest {{args}}
+    @docker-compose run --rm django pytest {{args}}
 
 # tailwind-watch: Watch and rebuild Tailwind CSS on file changes.
 tailwind-watch:
