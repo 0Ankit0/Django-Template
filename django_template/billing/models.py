@@ -16,6 +16,7 @@ class Product(models.Model):
     slug = models.SlugField(_("Slug"), unique=True)
     description = models.TextField(_("Description"), blank=True)
     active = models.BooleanField(_("Active"), default=True)
+    stripe_product_id = models.CharField(max_length=255, blank=True, editable=False)
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -66,24 +67,16 @@ class Feature(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True)
     active = models.BooleanField(default=True)
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self) -> str:
-        return self.name
+    class Meta: ordering = ["name"]
+    def __str__(self) -> str: return self.name
 
 
 class ProductFeature(models.Model):
     product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name="product_features")
     feature = models.ForeignKey(Feature, on_delete=models.CASCADE, related_name="product_features")
     enabled = models.BooleanField(default=True)
-
-    class Meta:
-        constraints = [models.UniqueConstraint(fields=["product", "feature"], name="billing_product_feature_unique")]
-
-    def __str__(self) -> str:
-        return f"{self.product}: {self.feature}"
+    class Meta: constraints = [models.UniqueConstraint(fields=["product", "feature"], name="billing_product_feature_unique")]
+    def __str__(self) -> str: return f"{self.product}: {self.feature}"
 
 
 class BillingCustomer(models.Model):
@@ -94,15 +87,9 @@ class BillingCustomer(models.Model):
     name = models.CharField(max_length=255, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["tenant", "provider"], name="billing_customer_tenant_provider_unique"),
-            models.UniqueConstraint(fields=["provider", "provider_customer_id"], name="billing_customer_provider_id_unique"),
-        ]
-
-    def __str__(self) -> str:
-        return self.name or self.email or str(self.tenant)
+        constraints = [models.UniqueConstraint(fields=["tenant", "provider"], name="billing_customer_tenant_provider_unique"), models.UniqueConstraint(fields=["provider", "provider_customer_id"], name="billing_customer_provider_id_unique")]
+    def __str__(self) -> str: return self.name or self.email or str(self.tenant)
 
 
 class Subscription(models.Model):
@@ -114,7 +101,6 @@ class Subscription(models.Model):
         CANCELED = "canceled", _("Canceled")
         UNPAID = "unpaid", _("Unpaid")
         PAUSED = "paused", _("Paused")
-
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="subscriptions")
     price = models.ForeignKey(Price, on_delete=models.PROTECT, related_name="subscriptions")
     status = models.CharField(max_length=32, choices=Status.choices)
@@ -129,14 +115,11 @@ class Subscription(models.Model):
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     class Meta:
         ordering = ["-created_at"]
         constraints = [models.UniqueConstraint(fields=["provider", "provider_subscription_id"], name="billing_subscription_provider_id_unique")]
         indexes = [models.Index(fields=["tenant", "status"]), models.Index(fields=["provider", "provider_customer_id"])]
-
-    def __str__(self) -> str:
-        return f"{self.tenant} - {self.price.product} ({self.status})"
+    def __str__(self) -> str: return f"{self.tenant} - {self.price.product} ({self.status})"
 
 
 class Payment(models.Model):
@@ -146,7 +129,6 @@ class Payment(models.Model):
         FAILED = "failed", _("Failed")
         REFUNDED = "refunded", _("Refunded")
         PARTIALLY_REFUNDED = "partially_refunded", _("Partially refunded")
-
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="payments")
     subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True, blank=True, related_name="payments")
     amount = models.PositiveBigIntegerField()
@@ -159,14 +141,11 @@ class Payment(models.Model):
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     class Meta:
         ordering = ["-created_at"]
         constraints = [models.UniqueConstraint(fields=["provider", "provider_payment_id"], name="billing_payment_provider_id_unique")]
         indexes = [models.Index(fields=["tenant", "status"])]
-
-    def __str__(self) -> str:
-        return f"{self.amount / 100:.2f} {self.currency.upper()} - {self.status}"
+    def __str__(self) -> str: return f"{self.amount / 100:.2f} {self.currency.upper()} - {self.status}"
 
 
 class Invoice(models.Model):
@@ -176,7 +155,6 @@ class Invoice(models.Model):
         PAID = "paid", _("Paid")
         VOID = "void", _("Void")
         UNCOLLECTIBLE = "uncollectible", _("Uncollectible")
-
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="billing_invoices")
     subscription = models.ForeignKey(Subscription, on_delete=models.SET_NULL, null=True, blank=True, related_name="invoices")
     provider = models.CharField(max_length=32, choices=Provider.choices)
@@ -194,20 +172,16 @@ class Invoice(models.Model):
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
     class Meta:
         ordering = ["-created_at"]
         constraints = [models.UniqueConstraint(fields=["provider", "provider_invoice_id"], name="billing_invoice_provider_id_unique")]
-
-    def __str__(self) -> str:
-        return self.number or self.provider_invoice_id
+    def __str__(self) -> str: return self.number or self.provider_invoice_id
 
 
 class CheckoutSession(models.Model):
     class Mode(models.TextChoices):
         PAYMENT = "payment", _("Payment")
         SUBSCRIPTION = "subscription", _("Subscription")
-
     tenant = models.ForeignKey("tenants.Tenant", on_delete=models.PROTECT, related_name="checkout_sessions")
     price = models.ForeignKey(Price, on_delete=models.PROTECT, related_name="checkout_sessions")
     provider = models.CharField(max_length=32, choices=Provider.choices)
@@ -218,13 +192,10 @@ class CheckoutSession(models.Model):
     completed_at = models.DateTimeField(null=True, blank=True)
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
     class Meta:
         ordering = ["-created_at"]
         constraints = [models.UniqueConstraint(fields=["provider", "provider_session_id"], name="billing_checkout_provider_id_unique")]
-
-    def __str__(self) -> str:
-        return self.provider_session_id
+    def __str__(self) -> str: return self.provider_session_id
 
 
 class WebhookEvent(models.Model):
@@ -236,11 +207,8 @@ class WebhookEvent(models.Model):
     processed_at = models.DateTimeField(null=True, blank=True)
     error = models.TextField(blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
     class Meta:
         ordering = ["-created_at"]
         constraints = [models.UniqueConstraint(fields=["provider", "event_id"], name="billing_webhook_provider_event_unique")]
         indexes = [models.Index(fields=["event_type", "processed"])]
-
-    def __str__(self) -> str:
-        return f"{self.provider}: {self.event_type}: {self.event_id}"
+    def __str__(self) -> str: return f"{self.provider}: {self.event_type}: {self.event_id}"
