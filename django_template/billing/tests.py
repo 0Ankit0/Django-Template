@@ -64,7 +64,7 @@ def test_stripe_webhook_uses_official_sdk(monkeypatch, settings):
     )
     settings.STRIPE_WEBHOOK_SECRET = "whsec_test"
 
-    webhook = handle_webhook(b"{}", "t=1,v1=test")
+    webhook = handle_webhook(b"{}", "test-signature")
 
     assert webhook.event_id == "evt_test"
     assert webhook.processed is True
@@ -109,7 +109,7 @@ def test_khalti_checkout_requires_npr_and_one_time_price(monkeypatch):
     assert result.provider == Provider.KHALTI
     assert result.reference == "pidx-test"
     assert result.redirect_url == "https://pay.test/khalti"
-    assert result.metadata == {"purchase_order_id": result.metadata["purchase_order_id"]}
+    assert result.metadata and result.metadata["purchase_order_id"].startswith("T1-")
 
 
 def test_khalti_checkout_rejects_recurring_price():
@@ -133,7 +133,7 @@ def test_esewa_checkout_builds_signed_uat_form():
     assert result.provider == Provider.ESEWA
     assert result.form_action.endswith("/api/epay/main/v2/form")
     assert result.form_fields["product_code"] == "EPAYTEST"
-    assert result.total_amount if hasattr(result, "total_amount") else result.form_fields["total_amount"] == "100.00"
+    assert result.form_fields["total_amount"] == "100.00"
     assert result.form_fields["signed_field_names"] == "total_amount,transaction_uuid,product_code"
     message = (
         f"total_amount={result.form_fields['total_amount']},"
