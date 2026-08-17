@@ -29,7 +29,10 @@ class OrganizationCreateForm(forms.ModelForm):
         if not value:
             raise forms.ValidationError(_("Enter a valid organization name or subdomain."))
         schema_name = value.replace("-", "_")[:63]
-        if Tenant.objects.filter(slug=value).exists() or Tenant.objects.filter(schema_name=schema_name).exists():
+        if (
+            Tenant.objects.filter(slug=value).exists()
+            or Tenant.objects.filter(schema_name=schema_name).exists()
+        ):
             raise forms.ValidationError(_("That subdomain is already in use."))
         return value
 
