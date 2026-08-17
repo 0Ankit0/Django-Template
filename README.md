@@ -78,16 +78,21 @@ The tenants app provides an owner-controlled organization membership workflow on
 
 Invitations are stored in the shared/public schema and contain a unique, non-guessable UUID token, expiration time, status, sender, recipient, optional message, and delivery timestamps.
 
-1. The organization owner selects an existing active user and sends an invitation.
-2. The user receives an email containing an acceptance link.
-3. The user must be authenticated as the invited account before the invitation can be accepted or declined.
-4. Accepting the invitation calls `Tenant.add_user()` and grants tenant access only after explicit acceptance.
-5. Invitations expire after seven days by default and cannot be accepted after expiry.
-6. Every new invitation or resend creates a **new database row with a new token**. Any older pending invitation for the same tenant/user is canceled, so there is no invitation `send_count` or multi-send counter.
+1. The organization owner selects an existing active user and creates an invitation.
+2. The invitation email is queued with Celery after the database transaction commits.
+3. The Celery worker renders the message using an allauth-style adapter: `<prefix>_subject.txt`, `<prefix>_message.txt`, and optional `<prefix>_message.html` templates, then sends it through Django's configured email backend.
+4. Successful delivery records `sent_at`; transient task failures are retried with exponential backoff and jitter.
+5. The user receives an email containing an acceptance link.
+6. The user must be authenticated as the invited account before the invitation can be accepted or declined.
+7. Accepting the invitation calls `Tenant.add_user()` and grants tenant access only after explicit acceptance.
+8. Invitations expire after seven days by default and cannot be accepted after expiry.
+9. Every new invitation or resend creates a **new database row with a new token**. Any older pending invitation for the same tenant/user is canceled, so there is no invitation `send_count` or multi-send counter.
+
+The invitation email follows the same separation used by django-allauth: template rendering and message construction are isolated behind an adapter, while the actual delivery is delegated to the project's email backend. Celery is the delivery boundary for this application so web requests do not wait on SMTP/provider I/O. django-allauth itself exposes `render_mail()`/`send_mail()` through its account adapter and uses Django's email backend; this project preserves that template/adapter structure while adding Celery for asynchronous delivery.
 
 ### Superuser administration
 
-Django Admin exposes a **Tenant Invitations** model for superusers. A superuser can select any existing active user and tenant, create an invitation on their behalf, and use the **Send invitation notification** admin action to email the recipient. The recipient still has to accept the invitation; creating an invitation does not silently grant tenant access.
+Django Admin exposes a **Tenant Invitations** model for superusers. A superuser can select an existing active user and tenant, create an invitation on their behalf, and use the **Create and queue invitation notification** action. The action always creates a fresh invitation row/token before queueing delivery. The recipient still has to accept the invitation; creating an invitation does not silently grant tenant access.
 
 The invitation admin exposes status, expiry, sender, recipient, delivery timestamp, and acceptance/decline timestamps so onboarding can be audited.
 
@@ -97,6 +102,10 @@ After adding the invitation migrations, apply shared migrations before starting 
     uv run python manage.py migrate_schemas
 
 For local email testing, configure Django's email backend in `.env` or `.envs/.local/.django`. The normal SMTP/Anymail configuration used by the project is supported.
+
+A Celery worker must be running for queued invitation emails to be delivered:
+
+    uv run celery -A config.celery_app worker -l info
 
 ## Billing
 
@@ -187,7 +196,7 @@ Build Tailwind CSS from input.css (no Node required):
     uv run python manage.py tailwind build
     uv run python manage.py tailwind watch
 
-`tw-animate-css` is installed using the manual method recommended by shadcn-django when using django-tailwind-cli:
+`tw-animate.css` is installed using the manual method recommended by shadcn-django when using django-tailwind-cli:
 
 - `tw-animate.css` is vendored in the project root.
 - `input.css` imports it with `@import "./tw-animate.css";`.
