@@ -1,12 +1,14 @@
 from typing import Any
 
+import stripe
 from django.db import transaction
 
 from .models import BillingCustomer
 from .models import CheckoutSession
 from .models import Price
 from .models import Provider
-from .services import _stripe_request
+from .services import _stripe_client
+from .services import _stripe_dict
 
 
 @transaction.atomic
@@ -23,19 +25,32 @@ def create_or_get_customer(tenant, email: str = "", name: str = "") -> BillingCu
         if changed:
             customer.save(update_fields=["email", "name", "updated_at"])
         return customer
-    stripe_customer = _stripe_request("/customers", {"email": email, "name": name, "metadata": {"tenant_id": str(tenant.pk)}})
+
+    stripe_customer = _stripe_client().v1.customers.create(
+        {
+            "email": email or None,
+            "name": name or None,
+            "metadata": {"tenant_id": str(tenant.pk)},
+        },
+    )
     return BillingCustomer.objects.create(
         tenant=tenant,
         provider=Provider.STRIPE,
-        provider_customer_id=stripe_customer["id"],
+        provider_customer_id=str(stripe_customer.id),
         email=email,
         name=name,
     )
 
 
 def create_checkout_session(request, price: Price) -> CheckoutSession:
+    if not price.stripe_price_id:
+        raise ValueError("This price has not been synchronized to Stripe yet.")
     tenant = request.tenant
-    customer = create_or_get_customer(tenant, email=getattr(request.user, "email", ""), name=getattr(request.user, "name", "") or str(request.user))
+    customer = create_or_get_customer(
+        tenant,
+        email=getattr(request.user, "email", ""),
+        name=getattr(request.user, "name", "") or str(request.user),
+    )
     mode = "subscription" if price.is_recurring else "payment"
     success_url = request.build_absolute_uri("/billing/success/") + "?session_id={CHECKOUT_SESSION_ID}"
     cancel_url = request.build_absolute_uri("/billing/pricing/")
@@ -49,15 +64,23 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
         "metadata": {"tenant_id": str(tenant.pk), "price_id": str(price.pk)},
     }
     if price.is_recurring:
-        payload["subscription_data"] = {"metadata": {"tenant_id": str(tenant.pk), "price_id": str(price.pk)}}
-    stripe_session = _stripe_request("/checkout/sessions", payload)
+        payload["subscription_data"] = {
+            "metadata": {"tenant_id": str(tenant.pk), "price_id": str(price.pk)},
+        }
+
+    try:
+        stripe_session = _stripe_client().v1.checkout.sessions.create(payload)
+    except stripe.StripeError:
+        raise
+
+    data = _stripe_dict(stripe_session)
     return CheckoutSession.objects.create(
         tenant=tenant,
         price=price,
         provider=Provider.STRIPE,
-        provider_session_id=stripe_session["id"],
+        provider_session_id=data["id"],
         mode=mode,
-        status=stripe_session.get("status", "open"),
-        url=stripe_session.get("url", ""),
-        metadata=stripe_session.get("metadata") or {},
+        status=data.get("status", "open"),
+        url=data.get("url", ""),
+        metadata=data.get("metadata") or {},
     )
