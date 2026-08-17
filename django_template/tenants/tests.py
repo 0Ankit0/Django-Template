@@ -9,6 +9,7 @@ from tenant_users.tenants.models import ExistsError
 
 from django_template.tenants.models import Invitation
 from django_template.tenants.models import Tenant
+from django_template.tenants.services import create_invitation
 from django_template.tenants.services import send_invitation_notification
 
 
@@ -51,7 +52,7 @@ def test_expired_invitation_cannot_be_accepted(user, tenant):
 
 
 @pytest.mark.django_db
-def test_invitation_notification_records_delivery(user, tenant, settings):
+def test_invitation_notification_records_delivery_without_count(user, tenant, settings):
     settings.DEFAULT_FROM_EMAIL = "noreply@example.com"
     settings.TENANT_USERS_DOMAIN = "testserver"
     invitation = Invitation.objects.create(
@@ -65,8 +66,21 @@ def test_invitation_notification_records_delivery(user, tenant, settings):
         assert send_invitation_notification(request, invitation) == 1
 
     invitation.refresh_from_db()
-    assert invitation.send_count == 1
     assert invitation.sent_at is not None
+    assert not hasattr(invitation, "send_count")
+
+
+@pytest.mark.django_db
+def test_new_invitation_cancels_previous_pending_and_creates_new_row(user, tenant):
+    first = create_invitation(tenant=tenant, user=user, invited_by=tenant.owner)
+    second = create_invitation(tenant=tenant, user=user, invited_by=tenant.owner)
+
+    first.refresh_from_db()
+    second.refresh_from_db()
+    assert first.pk != second.pk
+    assert first.status == Invitation.Status.CANCELED
+    assert second.status == Invitation.Status.PENDING
+    assert Invitation.objects.filter(tenant=tenant, user=user).count() == 2
 
 
 @pytest.mark.django_db
