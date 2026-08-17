@@ -20,12 +20,8 @@ class Product(models.Model):
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        ordering = ["name"]
-
-    def __str__(self) -> str:
-        return self.name
+    class Meta: ordering = ["name"]
+    def __str__(self) -> str: return self.name
 
 
 class Price(models.Model):
@@ -33,7 +29,6 @@ class Price(models.Model):
         ONE_TIME = "one_time", _("One time")
         MONTH = "month", _("Monthly")
         YEAR = "year", _("Yearly")
-
     product = models.ForeignKey(Product, on_delete=models.PROTECT, related_name="prices")
     nickname = models.CharField(max_length=255, blank=True)
     amount = models.PositiveBigIntegerField(validators=[MinValueValidator(0)], help_text=_("Amount in the smallest currency unit."))
@@ -44,19 +39,13 @@ class Price(models.Model):
     stripe_price_id = models.CharField(max_length=255, blank=True, editable=False)
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-
     class Meta:
         ordering = ["product__name", "amount"]
         constraints = [models.CheckConstraint(condition=models.Q(interval_count__gte=1), name="billing_price_interval_count_positive")]
-
     @property
-    def is_recurring(self) -> bool:
-        return self.interval != self.Interval.ONE_TIME
-
+    def is_recurring(self) -> bool: return self.interval != self.Interval.ONE_TIME
     @property
-    def amount_decimal(self) -> Decimal:
-        return Decimal(self.amount) / Decimal("100")
-
+    def amount_decimal(self) -> Decimal: return Decimal(self.amount) / Decimal("100")
     def __str__(self) -> str:
         suffix = "" if self.interval == self.Interval.ONE_TIME else f" / {self.interval}"
         return f"{self.product.name} - {self.amount_decimal:.2f} {self.currency.upper()}{suffix}"
@@ -77,6 +66,19 @@ class ProductFeature(models.Model):
     enabled = models.BooleanField(default=True)
     class Meta: constraints = [models.UniqueConstraint(fields=["product", "feature"], name="billing_product_feature_unique")]
     def __str__(self) -> str: return f"{self.product}: {self.feature}"
+
+
+class ProviderConfiguration(models.Model):
+    class Environment(models.TextChoices):
+        SANDBOX = "sandbox", _("Sandbox / Test")
+        LIVE = "live", _("Live / Production")
+    provider = models.CharField(max_length=32, choices=Provider.choices, unique=True)
+    enabled = models.BooleanField(default=True)
+    environment = models.CharField(max_length=16, choices=Environment.choices, default=Environment.SANDBOX)
+    notes = models.TextField(blank=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    class Meta: ordering = ["provider"]
+    def __str__(self) -> str: return self.get_provider_display()
 
 
 class BillingCustomer(models.Model):
@@ -186,7 +188,7 @@ class CheckoutSession(models.Model):
     price = models.ForeignKey(Price, on_delete=models.PROTECT, related_name="checkout_sessions")
     provider = models.CharField(max_length=32, choices=Provider.choices)
     provider_session_id = models.CharField(max_length=255)
-    mode = models.CharField(max_length=32, choices=Mode.choices)
+    mode = models.CharField(max_length=32)
     status = models.CharField(max_length=32, default="open")
     url = models.URLField(blank=True)
     completed_at = models.DateTimeField(null=True, blank=True)

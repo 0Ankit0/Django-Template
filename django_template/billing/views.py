@@ -11,18 +11,25 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from .checkout import create_checkout_session
-from .models import CheckoutSession, Payment, Price, Provider
+from .models import CheckoutSession, Payment, Price, Provider, ProviderConfiguration
 from .providers import create_esewa_checkout, create_khalti_checkout, esewa_status, khalti_lookup, verify_esewa_response
 from .services import cancel_subscription, create_portal_session, get_current_subscription, handle_webhook
 
 
+def provider_enabled(provider: str) -> bool:
+    config = ProviderConfiguration.objects.filter(provider=provider).first()
+    if config is not None:
+        return config.enabled
+    return bool(getattr(settings, f"BILLING_{provider.upper()}_ENABLED", True))
+
+
 def enabled_providers(price: Price) -> list[tuple[str, str]]:
     providers = []
-    if getattr(settings, "BILLING_STRIPE_ENABLED", True):
+    if provider_enabled(Provider.STRIPE):
         providers.append((Provider.STRIPE, "Stripe"))
-    if getattr(settings, "BILLING_KHALTI_ENABLED", True) and price.currency.lower() == "npr" and not price.is_recurring:
+    if provider_enabled(Provider.KHALTI) and price.currency.lower() == "npr" and not price.is_recurring:
         providers.append((Provider.KHALTI, "Khalti"))
-    if getattr(settings, "BILLING_ESEWA_ENABLED", True) and price.currency.lower() == "npr" and not price.is_recurring:
+    if provider_enabled(Provider.ESEWA) and price.currency.lower() == "npr" and not price.is_recurring:
         providers.append((Provider.ESEWA, "eSewa"))
     return providers
 

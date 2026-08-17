@@ -2,7 +2,7 @@ from django.contrib import admin
 from unfold.admin import ModelAdmin
 from unfold.admin import TabularInline
 
-from .models import BillingCustomer, CheckoutSession, Feature, Invoice, Payment, Price, Product, ProductFeature, Provider, Subscription, WebhookEvent
+from .models import BillingCustomer, CheckoutSession, Feature, Invoice, Payment, Price, Product, ProductFeature, ProviderConfiguration, Subscription, WebhookEvent
 
 
 class PriceInline(TabularInline):
@@ -47,6 +47,18 @@ class ProductFeatureAdmin(ModelAdmin):
     list_display = ["product", "feature", "enabled"]
     list_filter = ["enabled", "feature"]
     search_fields = ["product__name", "feature__name", "feature__key"]
+
+
+@admin.register(ProviderConfiguration)
+class ProviderConfigurationAdmin(ModelAdmin):
+    list_display = ["provider", "environment", "enabled", "updated_at"]
+    list_filter = ["provider", "environment", "enabled"]
+    search_fields = ["provider", "notes"]
+    readonly_fields = ["updated_at"]
+    fieldsets = (
+        (None, {"fields": ("provider", "enabled", "environment", "notes", "updated_at")}),
+        ("Credentials", {"description": "Provider secrets are intentionally configured through environment variables. Never paste secret API keys into Django Admin. See the Billing documentation for sandbox test credentials and setup."}),
+    )
 
 
 @admin.register(BillingCustomer)
