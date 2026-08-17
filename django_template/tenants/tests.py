@@ -11,6 +11,7 @@ from django_template.tenants.models import Invitation
 from django_template.tenants.models import Tenant
 from django_template.tenants.services import create_invitation
 from django_template.tenants.services import send_invitation_notification
+from django_template.tenants.tasks import send_invitation_email
 
 
 @pytest.fixture
@@ -66,6 +67,22 @@ def test_invitation_notification_is_queued_without_count(user, tenant):
     invitation.refresh_from_db()
     assert invitation.sent_at is None
     assert not hasattr(invitation, "send_count")
+
+
+@pytest.mark.django_db
+def test_invitation_email_task_records_delivery(user, tenant):
+    invitation = Invitation.objects.create(
+        tenant=tenant,
+        user=user,
+        invited_by=tenant.owner,
+    )
+
+    with patch.object(InvitationEmailAdapter, "send_mail", return_value=1) as send_mail:
+        assert send_invitation_email.run(invitation.pk) is True
+
+    send_mail.assert_called_once()
+    invitation.refresh_from_db()
+    assert invitation.sent_at is not None
 
 
 @pytest.mark.django_db
