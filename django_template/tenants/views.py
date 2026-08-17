@@ -54,9 +54,9 @@ def invite_user(request):
             try:
                 send_invitation_notification(request, invitation)
             except Exception:
-                messages.error(request, _("The invitation was created but could not be sent. Please resend it."))
+                messages.error(request, _("The invitation was created but could not be queued. Please try again."))
             else:
-                messages.success(request, _("Invitation sent."))
+                messages.success(request, _("Invitation email queued."))
                 return redirect("tenants:invite-user")
     else:
         form = InvitationForm(tenant=tenant, invited_by=request.user)
@@ -99,9 +99,9 @@ def resend_invitation(request, token):
     try:
         send_invitation_notification(request, new_invitation)
     except Exception:
-        messages.error(request, _("A new invitation was created but could not be sent. Please try again."))
+        messages.error(request, _("A new invitation was created but could not be queued. Please try again."))
     else:
-        messages.success(request, _("A new invitation was sent."))
+        messages.success(request, _("New invitation email queued."))
     return redirect("tenants:invite-user")
 
 
