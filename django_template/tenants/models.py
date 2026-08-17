@@ -106,7 +106,11 @@ class Invitation(models.Model):
             )
         if self.user_id and not self.user.is_active:
             raise ValidationError({"user": _("Inactive users cannot be invited.")})
-        if self.user_id and self.tenant_id and self.tenant.user_set.filter(pk=self.user_id).exists():
+        if (
+            self.user_id
+            and self.tenant_id
+            and self.tenant.user_set.filter(pk=self.user_id).exists()
+        ):
             raise ValidationError({"user": _("This user is already a member of the tenant.")})
 
     @transaction.atomic
