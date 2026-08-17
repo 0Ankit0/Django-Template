@@ -12,6 +12,7 @@ from .forms import InvitationForm
 from .forms import OrganizationCreateForm
 from .models import Invitation
 from .models import Tenant
+from .services import create_invitation
 from .services import send_invitation_notification
 
 
@@ -33,10 +34,7 @@ def create_organization(request):
                 tenant = form.save()
                 root_domain = settings.TENANT_USERS_DOMAIN.rstrip("/").split("://")[-1]
                 root_domain = root_domain.split("/", 1)[0]
-                tenant.domains.create(
-                    domain=f"{tenant.slug}.{root_domain}",
-                    is_primary=True,
-                )
+                tenant.domains.create(domain=f"{tenant.slug}.{root_domain}", is_primary=True)
             messages.success(request, _("Organization created successfully."))
             return _public_domain_redirect(request, tenant)
     else:
@@ -47,7 +45,7 @@ def create_organization(request):
 @login_required
 def invite_user(request):
     tenant = request.tenant
-    if tenant.schema_name == get_public_schema_name() or tenant.owner_id != request.user.id:
+    if request.tenant.schema_name == get_public_schema_name() or tenant.owner_id != request.user.id:
         raise Http404
     if request.method == "POST":
         form = InvitationForm(request.POST, tenant=tenant, invited_by=request.user)
@@ -56,8 +54,7 @@ def invite_user(request):
             try:
                 send_invitation_notification(request, invitation)
             except Exception:
-                invitation.delete()
-                messages.error(request, _("The invitation could not be sent. Please try again."))
+                messages.error(request, _("The invitation was created but could not be sent. Please resend it."))
             else:
                 messages.success(request, _("Invitation sent."))
                 return redirect("tenants:invite-user")
@@ -77,7 +74,10 @@ def invite_user(request):
 def resend_invitation(request, token):
     if request.method != "POST":
         raise Http404
-    invitation = get_object_or_404(Invitation, token=token)
+    invitation = get_object_or_404(
+        Invitation.objects.select_related("tenant", "user", "invited_by"),
+        token=token,
+    )
     if invitation.tenant.owner_id != request.user.id and not request.user.is_superuser:
         raise Http404
     if invitation.status != Invitation.Status.PENDING:
@@ -88,9 +88,21 @@ def resend_invitation(request, token):
         invitation.save(update_fields=["status", "updated_at"])
         messages.error(request, _("This invitation has expired."))
         return redirect("users:redirect")
-    send_invitation_notification(request, invitation)
-    messages.success(request, _("Invitation notification sent again."))
-    return redirect("users:redirect")
+
+    new_invitation = create_invitation(
+        tenant=invitation.tenant,
+        user=invitation.user,
+        invited_by=request.user,
+        message=invitation.message,
+        expires_at=invitation.expires_at,
+    )
+    try:
+        send_invitation_notification(request, new_invitation)
+    except Exception:
+        messages.error(request, _("A new invitation was created but could not be sent. Please try again."))
+    else:
+        messages.success(request, _("A new invitation was sent."))
+    return redirect("tenants:invite-user")
 
 
 @login_required
