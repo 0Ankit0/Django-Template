@@ -92,7 +92,7 @@ def test_invitation_email_uses_allauth_style_templates(user, tenant, settings):
             },
         )
 
-    assert message.subject == "Invitation to join Acme"
+    assert message.subject == f"Invitation to join {tenant.name}"
     assert message.to == [user.email]
     assert message.alternatives[0][0] == "<p>HTML</p>"
     assert message.body == "TEXT"
