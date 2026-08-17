@@ -1,6 +1,5 @@
 from typing import Any
 
-import stripe
 from django.db import transaction
 
 from .models import BillingCustomer
@@ -68,11 +67,7 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
             "metadata": {"tenant_id": str(tenant.pk), "price_id": str(price.pk)},
         }
 
-    try:
-        stripe_session = _stripe_client().v1.checkout.sessions.create(payload)
-    except stripe.StripeError:
-        raise
-
+    stripe_session = _stripe_client().v1.checkout.sessions.create(payload)
     data = _stripe_dict(stripe_session)
     return CheckoutSession.objects.create(
         tenant=tenant,
