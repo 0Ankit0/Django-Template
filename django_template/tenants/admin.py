@@ -78,15 +78,26 @@ class InvitationAdmin(ModelAdmin):
         sent = 0
         skipped = 0
         for invitation in queryset.select_related("tenant", "user", "invited_by"):
-            if invitation.status != Invitation.Status.PENDING or invitation.expires_at <= timezone.now():
+            if (
+                invitation.status != Invitation.Status.PENDING
+                or invitation.expires_at <= timezone.now()
+            ):
                 skipped += 1
                 continue
             try:
                 sent += send_invitation(request, invitation)
             except Exception as exc:  # pragma: no cover - email backend dependent
-                self.message_user(request, f"Could not send {invitation}: {exc}", level=messages.ERROR)
+                self.message_user(
+                    request,
+                    f"Could not send {invitation}: {exc}",
+                    level=messages.ERROR,
+                )
         if sent:
-            self.message_user(request, _(f"Sent {sent} invitation notification(s)."), level=messages.SUCCESS)
+            self.message_user(
+                request,
+                _(f"Sent {sent} invitation notification(s)."),
+                level=messages.SUCCESS,
+            )
         if skipped:
             self.message_user(
                 request,
