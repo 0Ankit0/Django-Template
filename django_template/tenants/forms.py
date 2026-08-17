@@ -1,7 +1,5 @@
 from django import forms
 from django.contrib.auth import get_user_model
-from django.db import transaction
-from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
 
 from .models import Invitation
@@ -24,26 +22,25 @@ class OrganizationCreateForm(forms.ModelForm):
         self.fields["slug"].required = False
 
     def clean_slug(self):
+        from django.utils.text import slugify
         value = self.cleaned_data.get("slug") or self.cleaned_data.get("name")
         value = slugify(value)
         if not value:
             raise forms.ValidationError(_("Enter a valid organization name or subdomain."))
         schema_name = value.replace("-", "_")[:63]
-        if (
-            Tenant.objects.filter(slug=value).exists()
-            or Tenant.objects.filter(schema_name=schema_name).exists()
-        ):
+        if Tenant.objects.filter(slug=value).exists() or Tenant.objects.filter(schema_name=schema_name).exists():
             raise forms.ValidationError(_("That subdomain is already in use."))
         return value
 
-    @transaction.atomic
     def save(self, commit=True):
+        from django.db import transaction
         tenant = super().save(commit=False)
         tenant.owner = self.owner
         tenant.schema_name = self.cleaned_data["slug"].replace("-", "_")[:63]
         if commit:
-            tenant.save()
-            tenant.add_user(self.owner, is_superuser=True)
+            with transaction.atomic():
+                tenant.save()
+                tenant.add_user(self.owner, is_superuser=True)
         return tenant
 
 
@@ -66,18 +63,18 @@ class InvitationForm(forms.ModelForm):
         user = self.cleaned_data["user"]
         if self.tenant.user_set.filter(pk=user.pk).exists():
             raise forms.ValidationError(_("This user is already a member of the organization."))
-        if Invitation.objects.filter(
-            tenant=self.tenant,
-            user=user,
-            status=Invitation.Status.PENDING,
-        ).exists():
-            raise forms.ValidationError(_("There is already a pending invitation for this user."))
+        # A pending invitation is intentionally allowed: submitting the form
+        # creates a new invitation row and invalidates the previous one.
         return user
 
     def save(self, commit=True):
-        invitation = super().save(commit=False)
-        invitation.tenant = self.tenant
-        invitation.invited_by = self.invited_by
-        if commit:
-            invitation.save()
-        return invitation
+        from .services import create_invitation
+        if not commit:
+            return super().save(commit=False)
+        return create_invitation(
+            tenant=self.tenant,
+            user=self.cleaned_data["user"],
+            invited_by=self.invited_by,
+            message=self.cleaned_data.get("message", ""),
+            expires_at=self.cleaned_data.get("expires_at"),
+        )
