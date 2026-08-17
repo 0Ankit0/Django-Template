@@ -29,14 +29,14 @@ STRIPE_WEBHOOK_SECRET=
 # Khalti sandbox
 # ------------------------------------------------------------------------------
 BILLING_KHALTI_ENABLED=True
-KHALTI_SECRET_KEY=
+KHALTI_SECRET_KEY=test_secret_key_f59e8b7d18b4499ca40f68195a846e9b
 KHALTI_ENVIRONMENT=sandbox
 
 # eSewa sandbox
 # ------------------------------------------------------------------------------
 BILLING_ESEWA_ENABLED=True
 ESEWA_PRODUCT_CODE=EPAYTEST
-ESEWA_SECRET_KEY=
+ESEWA_SECRET_KEY=8gBm/:&EnhH.1/q
 ESEWA_ENVIRONMENT=sandbox
 
 # Redis
