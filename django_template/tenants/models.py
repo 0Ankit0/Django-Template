@@ -96,8 +96,14 @@ class Invitation(models.Model):
 
     def clean(self) -> None:
         super().clean()
-        if self.invited_by_id and not self.invited_by.is_superuser and self.tenant.owner_id != self.invited_by_id:
-            raise ValidationError({"invited_by": _("Only the tenant owner or a superuser can create invitations.")})
+        if (
+            self.invited_by_id
+            and not self.invited_by.is_superuser
+            and self.tenant.owner_id != self.invited_by_id
+        ):
+            raise ValidationError(
+                {"invited_by": _("Only the tenant owner or a superuser can create invitations.")},
+            )
         if self.user_id and not self.user.is_active:
             raise ValidationError({"user": _("Inactive users cannot be invited.")})
         if self.user_id and self.tenant_id and self.tenant.user_set.filter(pk=self.user_id).exists():
