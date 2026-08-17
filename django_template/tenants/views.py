@@ -75,6 +75,8 @@ def invite_user(request):
 
 @login_required
 def resend_invitation(request, token):
+    if request.method != "POST":
+        raise Http404
     invitation = get_object_or_404(Invitation, token=token)
     if invitation.tenant.owner_id != request.user.id and not request.user.is_superuser:
         raise Http404
