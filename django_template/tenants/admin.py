@@ -9,7 +9,7 @@ from unfold.admin import ModelAdmin
 from .models import Domain
 from .models import Invitation
 from .models import Tenant
-from .services import send_invitation_notification as send_invitation
+from .services import send_invitation_notification as queue_invitation
 
 
 class InvitationAdminForm(forms.ModelForm):
@@ -65,24 +65,29 @@ class InvitationAdmin(ModelAdmin):
     autocomplete_fields = ["tenant", "user"]
     actions = ["send_invitation_notification"]
 
-    @admin.action(description=_("Send invitation notification"))
+    @admin.action(description=_("Queue invitation notification"))
     def send_invitation_notification(self, request, queryset):
-        sent = 0
+        queued = 0
         skipped = 0
         for invitation in queryset.select_related("tenant", "user", "invited_by"):
             if invitation.status != Invitation.Status.PENDING or invitation.expires_at <= timezone.now():
                 skipped += 1
                 continue
             try:
-                sent += send_invitation(request, invitation)
-            except Exception as exc:  # pragma: no cover - email backend dependent
+                queue_invitation(request, invitation)
+                queued += 1
+            except Exception as exc:  # pragma: no cover - broker dependent
                 self.message_user(
                     request,
-                    f"Could not send {invitation}: {exc}",
+                    f"Could not queue {invitation}: {exc}",
                     level=messages.ERROR,
                 )
-        if sent:
-            self.message_user(request, _(f"Sent {sent} invitation notification(s)."), level=messages.SUCCESS)
+        if queued:
+            self.message_user(
+                request,
+                _(f"Queued {queued} invitation notification(s)."),
+                level=messages.SUCCESS,
+            )
         if skipped:
             self.message_user(
                 request,
