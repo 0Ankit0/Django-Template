@@ -3,10 +3,10 @@ from unittest.mock import patch
 
 import pytest
 from django.core.exceptions import ValidationError
-from django.test import RequestFactory
 from django.utils import timezone
 from tenant_users.tenants.models import ExistsError
 
+from django_template.tenants.email import InvitationEmailAdapter
 from django_template.tenants.models import Invitation
 from django_template.tenants.models import Tenant
 from django_template.tenants.services import create_invitation
@@ -52,22 +52,50 @@ def test_expired_invitation_cannot_be_accepted(user, tenant):
 
 
 @pytest.mark.django_db
-def test_invitation_notification_records_delivery_without_count(user, tenant, settings):
-    settings.DEFAULT_FROM_EMAIL = "noreply@example.com"
-    settings.TENANT_USERS_DOMAIN = "testserver"
+def test_invitation_notification_is_queued_without_count(user, tenant):
     invitation = Invitation.objects.create(
         tenant=tenant,
         user=user,
         invited_by=tenant.owner,
     )
-    request = RequestFactory().get("/tenants/invitations/")
 
-    with patch("django_template.tenants.services.send_mail", return_value=1):
-        assert send_invitation_notification(request, invitation) == 1
+    with patch("django_template.tenants.tasks.send_invitation_email.delay") as delay:
+        assert send_invitation_notification(None, invitation) is None
 
+    delay.assert_called_once_with(invitation.pk)
     invitation.refresh_from_db()
-    assert invitation.sent_at is not None
+    assert invitation.sent_at is None
     assert not hasattr(invitation, "send_count")
+
+
+@pytest.mark.django_db
+def test_invitation_email_uses_allauth_style_templates(user, tenant, settings):
+    settings.DEFAULT_FROM_EMAIL = "noreply@example.com"
+    invitation = Invitation.objects.create(
+        tenant=tenant,
+        user=user,
+        invited_by=tenant.owner,
+    )
+
+    with patch("django_template.tenants.email.render_to_string") as render:
+        render.side_effect = ["Invitation to join Acme\n", "<p>HTML</p>", "TEXT"]
+        message = InvitationEmailAdapter().render_mail(
+            user.email,
+            {
+                "invitation": invitation,
+                "tenant": tenant,
+                "user": user,
+                "invited_by": tenant.owner,
+                "invitation_url": "https://example.com/tenants/invitations/token/",
+                "expires_at": invitation.expires_at,
+                "message": "Hello",
+            },
+        )
+
+    assert message.subject == "Invitation to join Acme"
+    assert message.to == [user.email]
+    assert message.alternatives[0][0] == "<p>HTML</p>"
+    assert message.body == "TEXT"
 
 
 @pytest.mark.django_db
