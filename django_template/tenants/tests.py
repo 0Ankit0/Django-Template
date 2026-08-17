@@ -2,19 +2,23 @@ from datetime import timedelta
 from unittest.mock import patch
 
 import pytest
-from django.core import mail
 from django.core.exceptions import ValidationError
 from django.test import RequestFactory
 from django.utils import timezone
+from tenant_users.tenants.models import ExistsError
 
 from django_template.tenants.models import Invitation
+from django_template.tenants.models import Tenant
 from django_template.tenants.services import send_invitation_notification
-from django_template.users.models import User
+
+
+@pytest.fixture
+def tenant(_public_tenant):
+    return Tenant.objects.get(schema_name="public")
 
 
 @pytest.mark.django_db
-def test_invitation_acceptance_grants_membership(user, _public_tenant):
-    tenant = _public_tenant
+def test_invitation_acceptance_grants_membership(user, tenant):
     invitation = Invitation.objects.create(
         tenant=tenant,
         user=user,
@@ -31,11 +35,11 @@ def test_invitation_acceptance_grants_membership(user, _public_tenant):
 
 
 @pytest.mark.django_db
-def test_expired_invitation_cannot_be_accepted(user, _public_tenant):
+def test_expired_invitation_cannot_be_accepted(user, tenant):
     invitation = Invitation.objects.create(
-        tenant=_public_tenant,
+        tenant=tenant,
         user=user,
-        invited_by=_public_tenant.owner,
+        invited_by=tenant.owner,
         expires_at=timezone.now() - timedelta(minutes=1),
     )
 
@@ -47,17 +51,15 @@ def test_expired_invitation_cannot_be_accepted(user, _public_tenant):
 
 
 @pytest.mark.django_db
-def test_invitation_notification_records_delivery(user, _public_tenant, settings):
+def test_invitation_notification_records_delivery(user, tenant, settings):
     settings.DEFAULT_FROM_EMAIL = "noreply@example.com"
+    settings.TENANT_USERS_DOMAIN = "testserver"
     invitation = Invitation.objects.create(
-        tenant=_public_tenant,
+        tenant=tenant,
         user=user,
-        invited_by=_public_tenant.owner,
+        invited_by=tenant.owner,
     )
     request = RequestFactory().get("/tenants/invitations/")
-    request.scheme = "http"
-    request.META["HTTP_HOST"] = "testserver"
-    settings.TENANT_USERS_DOMAIN = "testserver"
 
     with patch("django_template.tenants.services.send_mail", return_value=1):
         assert send_invitation_notification(request, invitation) == 1
@@ -68,13 +70,13 @@ def test_invitation_notification_records_delivery(user, _public_tenant, settings
 
 
 @pytest.mark.django_db
-def test_invitation_rejects_existing_membership(user, _public_tenant):
+def test_invitation_handles_existing_membership(user, tenant):
     invitation = Invitation.objects.create(
-        tenant=_public_tenant,
+        tenant=tenant,
         user=user,
-        invited_by=_public_tenant.owner,
+        invited_by=tenant.owner,
     )
 
-    with patch.object(_public_tenant, "add_user", side_effect=Exception("already linked")):
-        with pytest.raises(Exception, match="already linked"):
+    with patch.object(tenant, "add_user", side_effect=ExistsError("already linked")):
+        with pytest.raises(ValidationError, match="already a member"):
             invitation.accept()
