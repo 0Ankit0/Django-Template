@@ -1,5 +1,4 @@
 from django.conf import settings
-from django.core.mail import send_mail
 from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
@@ -13,32 +12,21 @@ def invitation_url(request, invitation: Invitation) -> str:
     if "://" in public_domain:
         base = public_domain.rstrip("/")
     else:
-        base = f"{request.scheme}://{public_domain}"
+        scheme = request.scheme if request is not None else "https"
+        base = f"{scheme}://{public_domain}"
     return f"{base}{path}"
 
 
-def send_invitation_notification(request, invitation: Invitation) -> int:
-    """Send one invitation email without mutating invitation count state."""
-    url = invitation_url(request, invitation)
-    subject = f"Invitation to join {invitation.tenant.name}"
-    body = (
-        f"You have been invited to join {invitation.tenant.name}.\n\n"
-        f"Accept the invitation: {url}\n\n"
-        f"This invitation expires on {invitation.expires_at:%Y-%m-%d %H:%M %Z}.\n"
-    )
-    if invitation.message:
-        body += f"\nMessage from {invitation.invited_by}:\n{invitation.message}\n"
-    sent = send_mail(
-        subject,
-        body,
-        settings.DEFAULT_FROM_EMAIL,
-        [invitation.user.email],
-        fail_silently=False,
-    )
-    if sent:
-        invitation.sent_at = timezone.now()
-        invitation.save(update_fields=["sent_at", "updated_at"])
-    return sent
+def queue_invitation_notification(invitation: Invitation) -> None:
+    """Queue invitation delivery after the current transaction commits."""
+    from .tasks import send_invitation_email
+
+    transaction.on_commit(lambda: send_invitation_email.delay(invitation.pk))
+
+
+def send_invitation_notification(request, invitation: Invitation) -> None:
+    """Backward-compatible entry point that queues, rather than sends, mail."""
+    queue_invitation_notification(invitation)
 
 
 @transaction.atomic
