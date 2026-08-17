@@ -71,7 +71,7 @@ def checkout(request: HttpRequest, price_id: int) -> HttpResponse:
                 provider_session_id=result.reference,
                 mode="payment",
                 url=result.redirect_url,
-                metadata={"provider": provider, "purchase_order_id": result.metadata["purchase_order_id"]},
+                metadata={"provider": provider, **(result.metadata or {})},
             )
             return redirect(result.redirect_url)
         result = create_esewa_checkout(request, price)
@@ -81,7 +81,7 @@ def checkout(request: HttpRequest, price_id: int) -> HttpResponse:
             provider=provider,
             provider_session_id=result.reference,
             mode="payment",
-            metadata={"provider": provider, "product_code": result.form_fields["product_code"]},
+            metadata={"provider": provider, **(result.metadata or {})},
         )
         return render(request, "billing/esewa_redirect.html", {"action": result.form_action, "fields": result.form_fields})
     except Exception as exc:
