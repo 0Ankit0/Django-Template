@@ -105,7 +105,7 @@ ESEWA_ENVIRONMENT = env("ESEWA_ENVIRONMENT", default="sandbox")
 LOGGING = {"version": 1, "disable_existing_loggers": False, "formatters": {"verbose": {"format": "%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s"}}, "handlers": {"console": {"level": "DEBUG", "class": "logging.StreamHandler", "formatter": "verbose"}}, "root": {"level": "INFO", "handlers": ["console"]}}
 REDIS_URL = env("REDIS_URL", default="redis://redis:6379/0")
 REDIS_SSL = REDIS_URL.startswith("rediss://")
-DJ_CONTROL_ROOM_SETTINGS = {"REGISTER_PANELS_IN_ADMIN": env.bool("CR_REGISTER_PANELS", default=False), "PANEL_ADMIN_REGISTRATION": {"dj_redis_panel": env.bool("CR_REGISTER_REDIS_PANEL", default=False), "dj_cache_panel": env.bool("CR_REGISTER_CACHE_PANEL", default=False), "dj_urls_panel": env.bool("CR_REGISTER_URLS_PANEL", default=False), "controlroom_sentry": env.bool("CR_REGISTER_SENTRY_PANEL", default=False)}}
+DJ_CONTROL_ROOM_SETTINGS = {"REGISTER_PANELS_IN_ADMIN": env.bool("CR_REGISTER_PANELS", default=False), "PANEL_ADMIN_REGISTRATION": {"dj_redis_panel": env.bool("CR_REGISTER_REDIS_PANEL", default=False), "dj_cache_panel": env.bool("CR_REGISTER_CACHE_PANEL", default=False), "dj_urls_panel": env.bool("CR_REGISTER_URLS_PANEL", default=False), "dj_celery_panel": env.bool("CR_REGISTER_CELERY_PANEL", default=False), "controlroom_sentry": env.bool("CR_REGISTER_SENTRY_PANEL", default=False)}}
 
 if USE_TZ: CELERY_TIMEZONE = TIME_ZONE
 CELERY_BROKER_URL = REDIS_URL
