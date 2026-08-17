@@ -1,76 +1,90 @@
-import hashlib
-import hmac
-import json
-import time
 from datetime import datetime
 from typing import Any
-from urllib.parse import urlencode
-from urllib.request import Request
-from urllib.request import urlopen
 
+import stripe
 from django.conf import settings
 from django.db import transaction
 from django.utils import timezone
 
-from .models import BillingCustomer, CheckoutSession, Invoice, Payment, Price, Provider, Subscription, WebhookEvent
+from .models import BillingCustomer
+from .models import CheckoutSession
+from .models import Invoice
+from .models import Payment
+from .models import Price
+from .models import Provider
+from .models import Subscription
+from .models import WebhookEvent
 
-STRIPE_API_BASE = "https://api.stripe.com/v1"
+
+def _stripe_client() -> stripe.StripeClient:
+    if not settings.STRIPE_SECRET_KEY:
+        raise RuntimeError("STRIPE_SECRET_KEY is not configured.")
+    return stripe.StripeClient(settings.STRIPE_SECRET_KEY)
 
 
-def _flatten(data: dict[str, Any], prefix: str = "") -> list[tuple[str, str]]:
-    result = []
-    for key, value in data.items():
-        name = f"{prefix}[{key}]" if prefix else key
-        if isinstance(value, dict): result.extend(_flatten(value, name))
-        elif isinstance(value, list):
-            for index, item in enumerate(value):
-                result.extend(_flatten(item, f"{name}[{index}]") if isinstance(item, dict) else [(f"{name}[{index}]", str(item))])
-        elif value is not None: result.append((name, str(value).lower() if isinstance(value, bool) else str(value)))
-    return result
+def _stripe_dict(resource: Any) -> dict[str, Any]:
+    if hasattr(resource, "to_dict_recursive"):
+        return resource.to_dict_recursive()
+    if isinstance(resource, dict):
+        return resource
+    return dict(resource)
 
 
 def _stripe_request(path: str, data: dict[str, Any] | None = None, method: str = "POST") -> dict[str, Any]:
-    if not settings.STRIPE_SECRET_KEY: raise RuntimeError("STRIPE_SECRET_KEY is not configured.")
-    request = Request(f"{STRIPE_API_BASE}{path}", data=urlencode(_flatten(data or {})).encode() if method != "GET" else None, method=method, headers={"Authorization": f"Bearer {settings.STRIPE_SECRET_KEY}", "Content-Type": "application/x-www-form-urlencoded", "User-Agent": "django-template-billing/1.0"})
-    with urlopen(request, timeout=20) as response:  # noqa: S310
-        return json.loads(response.read().decode())
+    """Compatibility wrapper for the catalog command; transport is the official Stripe SDK."""
+    if method != "POST":
+        raise NotImplementedError("The Stripe SDK integration does not use generic HTTP requests.")
+    payload = data or {}
+    client = _stripe_client()
+    if path == "/products":
+        return _stripe_dict(client.v1.products.create(payload))
+    if path == "/prices":
+        return _stripe_dict(client.v1.prices.create(payload))
+    raise NotImplementedError(f"Unsupported Stripe endpoint: {path}")
 
 
 def _dt(value: Any) -> datetime | None:
     return datetime.fromtimestamp(int(value), tz=timezone.utc) if value else None
 
 
+def create_stripe_customer(*, tenant, email: str = "", name: str = "") -> dict[str, Any]:
+    customer = _stripe_client().v1.customers.create({"email": email or None, "name": name or None, "metadata": {"tenant_id": str(tenant.pk)}})
+    return _stripe_dict(customer)
+
+
 def create_portal_session(request) -> str:
     customer = BillingCustomer.objects.get(tenant=request.tenant, provider=Provider.STRIPE)
-    session = _stripe_request("/billing_portal/sessions", {"customer": customer.provider_customer_id, "return_url": request.build_absolute_uri("/billing/")})
-    return str(session["url"])
+    session = _stripe_client().v1.billing_portal.sessions.create({"customer": customer.provider_customer_id, "return_url": request.build_absolute_uri("/billing/")})
+    return str(session.url)
 
 
 def cancel_subscription(subscription: Subscription, at_period_end: bool = True) -> Subscription:
-    if subscription.provider != Provider.STRIPE: raise ValueError("This subscription is not managed by Stripe.")
-    return sync_subscription(_stripe_request(f"/subscriptions/{subscription.provider_subscription_id}", {"cancel_at_period_end": at_period_end}))
+    if subscription.provider != Provider.STRIPE:
+        raise ValueError("This subscription is not managed by Stripe.")
+    response = _stripe_client().v1.subscriptions.update(subscription.provider_subscription_id, {"cancel_at_period_end": at_period_end})
+    return sync_subscription(_stripe_dict(response))
 
 
 def change_subscription(subscription: Subscription, price: Price) -> Subscription:
-    if subscription.provider != Provider.STRIPE: raise ValueError("This subscription is not managed by Stripe.")
-    response = _stripe_request(f"/subscriptions/{subscription.provider_subscription_id}", {"items": [{"id": _subscription_item_id(subscription), "price": price.stripe_price_id}]})
-    return sync_subscription(response)
-
-
-def _subscription_item_id(subscription: Subscription) -> str:
-    response = _stripe_request(f"/subscriptions/{subscription.provider_subscription_id}", method="GET")
-    items = response.get("items", {}).get("data", [])
-    if not items: raise ValueError("Stripe subscription has no subscription items.")
-    return str(items[0]["id"])
+    if subscription.provider != Provider.STRIPE:
+        raise ValueError("This subscription is not managed by Stripe.")
+    stripe_subscription = _stripe_client().v1.subscriptions.retrieve(subscription.provider_subscription_id)
+    items = stripe_subscription.items.data
+    if not items:
+        raise ValueError("Stripe subscription has no subscription items.")
+    response = _stripe_client().v1.subscriptions.update(subscription.provider_subscription_id, {"items": [{"id": items[0].id, "price": price.stripe_price_id}]})
+    return sync_subscription(_stripe_dict(response))
 
 
 def sync_subscription(data: dict[str, Any]) -> Subscription:
     customer_id = str(data.get("customer") or "")
     customer = BillingCustomer.objects.select_related("tenant").get(provider=Provider.STRIPE, provider_customer_id=customer_id)
     items = data.get("items", {}).get("data", [])
-    if not items: raise ValueError("Stripe subscription has no price item.")
+    if not items:
+        raise ValueError("Stripe subscription has no price item.")
     price = Price.objects.filter(stripe_price_id=str(items[0].get("price", {}).get("id", ""))).first()
-    if not price: raise ValueError("No local billing price for the Stripe price.")
+    if not price:
+        raise ValueError("No local billing price for the Stripe price.")
     subscription, _ = Subscription.objects.get_or_create(provider=Provider.STRIPE, provider_subscription_id=data["id"], defaults={"tenant": customer.tenant, "price": price, "status": data.get("status", Subscription.Status.INCOMPLETE), "provider_customer_id": customer_id})
     subscription.tenant = customer.tenant
     subscription.price = price
@@ -102,7 +116,8 @@ def sync_invoice(data: dict[str, Any]) -> Invoice:
     invoice.invoice_pdf = data.get("invoice_pdf") or ""
     invoice.period_start = _dt(data.get("period_start"))
     invoice.period_end = _dt(data.get("period_end"))
-    if data.get("status") == "paid": invoice.paid_at = invoice.paid_at or timezone.now()
+    if data.get("status") == "paid":
+        invoice.paid_at = invoice.paid_at or timezone.now()
     invoice.metadata = data.get("metadata") or {}
     invoice.save()
     return invoice
@@ -144,29 +159,22 @@ def process_webhook(event: dict[str, Any]) -> None:
             payment.save(update_fields=["status", "updated_at"])
 
 
-def verify_webhook_signature(payload: bytes, signature: str, tolerance: int = 300) -> bool:
-    secret = settings.STRIPE_WEBHOOK_SECRET
-    if not secret or not signature: return False
-    timestamp = None; signatures = []
-    for part in signature.split(","):
-        key, _, value = part.partition("=")
-        if key == "t":
-            try: timestamp = int(value)
-            except ValueError: return False
-        elif key == "v1": signatures.append(value)
-    if timestamp is None or abs(int(time.time()) - timestamp) > tolerance: return False
-    expected = hmac.new(secret.encode(), f"{timestamp}.{payload.decode()}".encode(), hashlib.sha256).hexdigest()
-    return any(hmac.compare_digest(expected, value) for value in signatures)
-
-
 def handle_webhook(payload: bytes, signature: str) -> WebhookEvent:
-    if not verify_webhook_signature(payload, signature): raise ValueError("Invalid Stripe webhook signature.")
-    event = json.loads(payload.decode())
+    if not settings.STRIPE_WEBHOOK_SECRET or not signature:
+        raise ValueError("Stripe webhook secret/signature is not configured.")
+    try:
+        event = stripe.Webhook.construct_event(payload, signature, settings.STRIPE_WEBHOOK_SECRET)
+    except (ValueError, stripe.error.SignatureVerificationError) as exc:
+        raise ValueError("Invalid Stripe webhook signature or payload.") from exc
+    event_data = _stripe_dict(event)
     with transaction.atomic():
-        webhook, created = WebhookEvent.objects.get_or_create(provider=Provider.STRIPE, event_id=event["id"], defaults={"event_type": event["type"], "payload": event})
-        if not created and webhook.processed: return webhook
-        process_webhook(event)
-        webhook.processed = True; webhook.processed_at = timezone.now(); webhook.error = ""
+        webhook, created = WebhookEvent.objects.get_or_create(provider=Provider.STRIPE, event_id=event_data["id"], defaults={"event_type": event_data["type"], "payload": event_data})
+        if not created and webhook.processed:
+            return webhook
+        process_webhook(event_data)
+        webhook.processed = True
+        webhook.processed_at = timezone.now()
+        webhook.error = ""
         webhook.save(update_fields=["processed", "processed_at", "error"])
         return webhook
 
