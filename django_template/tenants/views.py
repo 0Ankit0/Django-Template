@@ -1,11 +1,10 @@
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
-from django.urls import reverse
-from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_tenants.utils import get_public_schema_name
 
@@ -32,15 +31,12 @@ def create_organization(request):
         if form.is_valid():
             with transaction.atomic():
                 tenant = form.save()
-                base_domain = str(getattr(request, "tenant", None) and request.tenant.domains.first().domain or "")
-                host = request.get_host().split(":", 1)[0]
-                root_domain = host if host in {"localhost", "127.0.0.1"} else request.get_host().split(":", 1)[0]
-                if "." in root_domain and not root_domain.endswith(".localhost"):
-                    root_domain = root_domain.split(".", 1)[-1]
-                if not base_domain:
-                    base_domain = root_domain
-                domain_name = f"{tenant.slug}.{base_domain}"
-                tenant.domains.create(domain=domain_name, is_primary=True)
+                root_domain = settings.TENANT_USERS_DOMAIN.rstrip("/").split("://")[-1]
+                root_domain = root_domain.split("/", 1)[0]
+                tenant.domains.create(
+                    domain=f"{tenant.slug}.{root_domain}",
+                    is_primary=True,
+                )
             messages.success(request, _("Organization created successfully."))
             return _public_domain_redirect(request, tenant)
     else:
@@ -67,11 +63,7 @@ def invite_user(request):
                 return redirect("tenants:invite-user")
     else:
         form = InvitationForm(tenant=tenant, invited_by=request.user)
-    return render(
-        request,
-        "tenants/invite_user.html",
-        {"form": form, "tenant": tenant},
-    )
+    return render(request, "tenants/invite_user.html", {"form": form, "tenant": tenant})
 
 
 @login_required
