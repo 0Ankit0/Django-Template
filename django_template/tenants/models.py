@@ -81,9 +81,9 @@ class Invitation(models.Model):
             ),
         ]
         indexes = [
-            models.Index(fields=["tenant", "status"]),
-            models.Index(fields=["user", "status"]),
-            models.Index(fields=["expires_at"]),
+            models.Index(fields=["tenant", "status"], name="tenants_inv_tenant__idx"),
+            models.Index(fields=["user", "status"], name="tenants_inv_user_id_idx"),
+            models.Index(fields=["expires_at"], name="tenants_inv_expires_idx"),
         ]
 
     def __str__(self) -> str:
