@@ -9,6 +9,7 @@ from unfold.admin import ModelAdmin
 from .models import Domain
 from .models import Invitation
 from .models import Tenant
+from .services import create_invitation
 from .services import send_invitation_notification as queue_invitation
 
 
@@ -65,7 +66,7 @@ class InvitationAdmin(ModelAdmin):
     autocomplete_fields = ["tenant", "user"]
     actions = ["send_invitation_notification"]
 
-    @admin.action(description=_("Queue invitation notification"))
+    @admin.action(description=_("Create and queue invitation notification"))
     def send_invitation_notification(self, request, queryset):
         queued = 0
         skipped = 0
@@ -74,7 +75,14 @@ class InvitationAdmin(ModelAdmin):
                 skipped += 1
                 continue
             try:
-                queue_invitation(request, invitation)
+                new_invitation = create_invitation(
+                    tenant=invitation.tenant,
+                    user=invitation.user,
+                    invited_by=request.user,
+                    message=invitation.message,
+                    expires_at=invitation.expires_at,
+                )
+                queue_invitation(request, new_invitation)
                 queued += 1
             except Exception as exc:  # pragma: no cover - broker dependent
                 self.message_user(
@@ -85,7 +93,7 @@ class InvitationAdmin(ModelAdmin):
         if queued:
             self.message_user(
                 request,
-                _(f"Queued {queued} invitation notification(s)."),
+                _(f"Created and queued {queued} new invitation notification(s)."),
                 level=messages.SUCCESS,
             )
         if skipped:
