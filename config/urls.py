@@ -37,6 +37,8 @@ urlpatterns = [
     # User management
     path("users/", include("django_template.users.urls", namespace="users")),
     path("accounts/", include("allauth.urls")),
+    # Billing
+    path("billing/", include("django_template.billing.urls", namespace="billing")),
     # Your stuff: custom urls includes go here
     # ...
     # Media files

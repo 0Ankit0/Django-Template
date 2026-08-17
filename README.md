@@ -1,6 +1,6 @@
 # django-template
 
-Custom multi-tenant Django starter with tenant-aware auth and reusable UI components.
+Custom multi-tenant Django starter with tenant-aware auth, reusable UI components, and reusable Stripe billing.
 
 License: Apache Software License 2.0
 
@@ -13,6 +13,7 @@ License: Apache Software License 2.0
 - DRF + drf-spectacular
 - Django Control Room with Redis, cache, URLs, Celery, and custom Sentry panels
 - Tailwind CSS via django-tailwind-cli + django-cotton + shadcn-django components
+- Tenant-aware billing with Stripe Checkout, Billing Portal, subscriptions, payments, invoices, and signed webhooks
 
 ## Local Development
 
@@ -61,6 +62,59 @@ migrates tenant schemas. Set `DJANGO_PUBLIC_TENANT_OWNER_EMAIL` in
 `.envs/.local/.django` to choose the initial public tenant owner.
 
 For local tenant routing, use domains under .localhost such as acme.localhost.
+
+## Billing
+
+Billing is tenant-first and stored in the shared/public schema because a subscription belongs to a tenant, not an individual user.
+
+The billing app provides:
+
+- `Product` and reusable `Price` records
+- `Feature` and product-feature entitlements
+- Stripe customer records mapped one-to-one to tenants
+- Subscriptions with lifecycle state and billing periods
+- Payments and invoices
+- Checkout sessions
+- Idempotent webhook event storage
+- Stripe Checkout and Billing Portal
+- A reusable `requires_feature("feature-key")` decorator
+- Django admin screens for the complete catalog and billing state
+- A `sync_billing_catalog` management command for creating missing Stripe Products and Prices
+
+### Stripe configuration
+
+Set these environment variables in local/production secrets:
+
+    STRIPE_SECRET_KEY=sk_test_...
+    STRIPE_PUBLISHABLE_KEY=pk_test_...
+    STRIPE_WEBHOOK_SECRET=whsec_...
+
+The integration intentionally uses Stripe's HTTP API directly, so the template does not add a second SDK dependency to `pyproject.toml`/`uv.lock`.
+
+### Create products and prices
+
+Create products, prices, and features in Django Admin, then synchronize products and prices to Stripe:
+
+    uv run python manage.py sync_billing_catalog
+
+The command creates missing Stripe Products and Prices and stores their provider IDs locally. Existing provider IDs are left untouched because Stripe Prices are immutable; create a new local Price when you need a new amount.
+
+### Billing URLs
+
+- `/billing/` — tenant billing dashboard
+- `/billing/pricing/` — pricing page
+- `/billing/portal/` — Stripe Billing Portal redirect
+- `/billing/webhooks/stripe/` — Stripe webhook endpoint
+
+The webhook endpoint must be configured in Stripe to point to your deployed `/billing/webhooks/stripe/` URL. Webhook signatures are verified against the raw request body and a five-minute timestamp tolerance, and events are persisted by provider event ID so Stripe retries are idempotent.
+
+For local development, use the Stripe CLI to forward events:
+
+    stripe listen --forward-to http://localhost:8000/billing/webhooks/stripe/
+
+Use the webhook secret printed by the CLI as `STRIPE_WEBHOOK_SECRET`.
+
+The application never treats the Checkout success page as proof of payment. Subscription and payment state is updated from verified Stripe webhook events.
 
 ## UI Components (django-cotton + shadcn-django)
 
@@ -185,6 +239,7 @@ Sentry API-backed issue management requires these environment variables:
     just tailwind-watch
     just add-shadcn <component>
     just add-shadcn-allauth
+    uv run python manage.py sync_billing_catalog
 
 ### Run tests
 
@@ -209,7 +264,8 @@ Sentry API-backed issue management requires these environment variables:
 
 ## Notes
 
-- Keep tenancy model changes in django_template/tenants.
-- Keep auth profile changes in django_template/users.
-- Add or customize cotton components directly in django_template/templates/cotton.
-- Django admin login is overridden at django_template/templates/admin/login.html and uses the same cotton/tailwind visual system.
+- Keep tenancy model changes in `django_template/tenants`.
+- Keep auth profile changes in `django_template/users`.
+- Billing lives in `django_template/billing` and is registered as a shared/public-schema app because its records are tenant-owned.
+- Add or customize cotton components directly in `django_template/templates/cotton`.
+- Django admin login is overridden at `django_template/templates/admin/login.html` and uses the same cotton/tailwind visual system.
