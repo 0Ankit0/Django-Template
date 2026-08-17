@@ -62,6 +62,7 @@ class InvitationAdmin(ModelAdmin):
     search_fields = ["tenant__name", "user__email", "invited_by__email"]
     readonly_fields = [
         "token",
+        "status",
         "invited_by",
         "sent_at",
         "send_count",
