@@ -94,7 +94,7 @@ The invitation admin also exposes status, expiry, sender, recipient, delivery co
 After adding the invitation migration, apply shared migrations before starting the application:
 
     uv run python manage.py migrate_schemas --shared
-    uv run python python manage.py migrate_schemas
+    uv run python manage.py migrate_schemas
 
 For local email testing, configure Django's email backend in `.env` or `.envs/.local/.django`. The normal SMTP/Anymail configuration used by the project is supported.
 
@@ -288,6 +288,14 @@ Sentry API-backed issue management requires these environment variables:
 
     uv run coverage run -m pytest
     uv run coverage html
+
+### Celery worker
+
+    uv run celery -A config.celery_app worker -l info
+
+### Celery beat
+
+    uv run celery -A config.celery_app beat
 
 ## Notes
 
