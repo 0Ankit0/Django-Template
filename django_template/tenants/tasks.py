@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from celery import shared_task
+from django.core.exceptions import ObjectDoesNotExist
 from django.db import transaction
 from django.utils import timezone
 
@@ -19,11 +20,14 @@ from .services import invitation_url
 )
 def send_invitation_email(self, invitation_id: int) -> bool:
     """Render and deliver one invitation email outside the web request."""
-    invitation = Invitation.objects.select_related(
-        "tenant",
-        "user",
-        "invited_by",
-    ).get(pk=invitation_id)
+    try:
+        invitation = Invitation.objects.select_related(
+            "tenant",
+            "user",
+            "invited_by",
+        ).get(pk=invitation_id)
+    except ObjectDoesNotExist:
+        return False
 
     if invitation.sent_at is not None:
         return True
@@ -35,7 +39,7 @@ def send_invitation_email(self, invitation_id: int) -> bool:
         return False
 
     # The invitation URL is deliberately built from the configured public
-    # tenant-users domain so the Celery worker does not need a request object.
+    # tenant-users domain so the Celery worker doesn't need a request object.
     url = invitation_url(None, invitation)
     context = {
         "invitation": invitation,
@@ -47,7 +51,9 @@ def send_invitation_email(self, invitation_id: int) -> bool:
         "message": invitation.message,
     }
 
-    InvitationEmailAdapter().send_mail(invitation.user.email, context)
+    delivered = InvitationEmailAdapter().send_mail(invitation.user.email, context)
+    if delivered != 1:
+        raise RuntimeError("Invitation email backend did not report a successful delivery")
 
     with transaction.atomic():
         updated = Invitation.objects.filter(
