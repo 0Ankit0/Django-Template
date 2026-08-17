@@ -2,10 +2,10 @@ import base64
 import hashlib
 import hmac
 import json
-import time
 from types import SimpleNamespace
 
 import pytest
+import stripe
 from django.contrib import admin
 from django.test import override_settings
 
@@ -18,7 +18,7 @@ from .models import ProviderConfiguration
 from .providers import create_esewa_checkout
 from .providers import create_khalti_checkout
 from .providers import verify_esewa_response
-from .services import verify_webhook_signature
+from .services import handle_webhook
 
 
 @pytest.mark.django_db
@@ -54,17 +54,20 @@ def test_provider_configuration_is_seedable_and_unique():
     }
 
 
-def test_stripe_signature_verification():
-    payload = json.dumps({"id": "evt_test", "type": "test"}).encode()
-    secret = "whsec_test"
-    timestamp = int(time.time())
-    signed = f"{timestamp}.{payload.decode()}".encode()
-    digest = hmac.new(secret.encode(), signed, hashlib.sha256).hexdigest()
+@pytest.mark.django_db
+def test_stripe_webhook_uses_official_sdk(monkeypatch, settings):
+    event = {"id": "evt_test", "type": "test.event", "data": {"object": {}}}
+    monkeypatch.setattr(
+        stripe.Webhook,
+        "construct_event",
+        lambda payload, signature, secret: SimpleNamespace(to_dict_recursive=lambda: event),
+    )
+    settings.STRIPE_WEBHOOK_SECRET = "whsec_test"
 
-    with override_settings(STRIPE_WEBHOOK_SECRET=secret):
-        assert verify_webhook_signature(payload, f"t={timestamp},v1={digest}") is True
-        assert verify_webhook_signature(payload, f"t={timestamp},v1=bad") is False
-        assert verify_webhook_signature(payload, f"t={timestamp - 301},v1={digest}") is False
+    webhook = handle_webhook(b"{}", "test-signature")
+
+    assert webhook.event_id == "evt_test"
+    assert webhook.processed is True
 
 
 def test_esewa_signature_verification_rejects_tampering():
@@ -106,6 +109,7 @@ def test_khalti_checkout_requires_npr_and_one_time_price(monkeypatch):
     assert result.provider == Provider.KHALTI
     assert result.reference == "pidx-test"
     assert result.redirect_url == "https://pay.test/khalti"
+    assert result.metadata and result.metadata["purchase_order_id"].startswith("T1-")
 
 
 def test_khalti_checkout_rejects_recurring_price():
@@ -138,6 +142,7 @@ def test_esewa_checkout_builds_signed_uat_form():
     )
     expected = base64.b64encode(hmac.new(b"test-secret", message.encode(), hashlib.sha256).digest()).decode()
     assert result.form_fields["signature"] == expected
+    assert result.metadata == {"product_code": "EPAYTEST"}
 
 
 def test_billing_models_are_registered_in_admin():
