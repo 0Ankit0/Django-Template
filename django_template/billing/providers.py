@@ -21,6 +21,7 @@ class GatewayResult:
     redirect_url: str = ""
     form_action: str = ""
     form_fields: dict[str, str] | None = None
+    metadata: dict[str, str] | None = None
 
 
 def _json_request(url: str, payload: dict, headers: dict[str, str]) -> dict:
@@ -46,11 +47,7 @@ def _khalti_secret() -> str:
 
 
 def _khalti_base() -> str:
-    return (
-        "https://dev.khalti.com/api/v2"
-        if settings.KHALTI_ENVIRONMENT == "sandbox"
-        else "https://khalti.com/api/v2"
-    )
+    return "https://dev.khalti.com/api/v2" if settings.KHALTI_ENVIRONMENT == "sandbox" else "https://khalti.com/api/v2"
 
 
 def create_khalti_checkout(request, price) -> GatewayResult:
@@ -82,6 +79,7 @@ def create_khalti_checkout(request, price) -> GatewayResult:
         Provider.KHALTI,
         str(response["pidx"]),
         redirect_url=str(response["payment_url"]),
+        metadata={"purchase_order_id": order_id},
     )
 
 
@@ -113,11 +111,7 @@ def _esewa_signature(message: str) -> str:
 
 
 def _esewa_base() -> str:
-    return (
-        "https://rc-epay.esewa.com.np/api/epay/main/v2/form"
-        if settings.ESEWA_ENVIRONMENT == "sandbox"
-        else "https://epay.esewa.com.np/api/epay/main/v2/form"
-    )
+    return "https://rc-epay.esewa.com.np/api/epay/main/v2/form" if settings.ESEWA_ENVIRONMENT == "sandbox" else "https://epay.esewa.com.np/api/epay/main/v2/form"
 
 
 def create_esewa_checkout(request, price) -> GatewayResult:
@@ -142,15 +136,14 @@ def create_esewa_checkout(request, price) -> GatewayResult:
         "success_url": callback,
         "failure_url": callback,
         "signed_field_names": signed_field_names,
-        "signature": _esewa_signature(
-            _esewa_secret_message(total, transaction_uuid, product_code),
-        ),
+        "signature": _esewa_signature(_esewa_secret_message(total, transaction_uuid, product_code)),
     }
     return GatewayResult(
         Provider.ESEWA,
         transaction_uuid,
         form_action=_esewa_base(),
         form_fields=fields,
+        metadata={"product_code": product_code},
     )
 
 
@@ -176,18 +169,8 @@ def verify_esewa_response(data_b64: str) -> dict:
 
 
 def esewa_status(transaction_uuid: str, total_amount: str) -> dict:
-    base = (
-        "https://rc.esewa.com.np/api/epay/transaction/status/"
-        if settings.ESEWA_ENVIRONMENT == "sandbox"
-        else "https://epay.esewa.com.np/api/epay/transaction/status/"
-    )
-    query = urlencode(
-        {
-            "product_code": _esewa_product_code(),
-            "total_amount": total_amount,
-            "transaction_uuid": transaction_uuid,
-        },
-    )
+    base = "https://rc.esewa.com.np/api/epay/transaction/status/" if settings.ESEWA_ENVIRONMENT == "sandbox" else "https://epay.esewa.com.np/api/epay/transaction/status/"
+    query = urlencode({"product_code": _esewa_product_code(), "total_amount": total_amount, "transaction_uuid": transaction_uuid})
     request = Request(f"{base}?{query}", method="GET")
     with urlopen(request, timeout=20) as response:  # noqa: S310
         return json.loads(response.read().decode())
