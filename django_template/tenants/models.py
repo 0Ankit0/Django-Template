@@ -4,6 +4,7 @@ from uuid import uuid4
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.db import transaction
 from django.db.models import Q
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -102,6 +103,7 @@ class Invitation(models.Model):
         if self.user_id and self.tenant_id and self.tenant.user_set.filter(pk=self.user_id).exists():
             raise ValidationError({"user": _("This user is already a member of the tenant.")})
 
+    @transaction.atomic
     def accept(self) -> None:
         if self.status == self.Status.ACCEPTED:
             return
