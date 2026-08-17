@@ -44,6 +44,7 @@ dependencies = [
   "python-slugify==8.0.4",
   "redis==8.0.1",
   "sentry-sdk==2.66.1",
+  "stripe==15.3.1",
   "uvicorn-worker==0.4.0",
   "uvicorn[standard]==0.51.0",
   "whitenoise==6.12.0",
@@ -85,7 +86,6 @@ custom_blocks = "slot"
 close_void_tags = true
 format_css = true
 format_js = true
-# TODO: remove T002 when fixed https://github.com/djlint/djLint/issues/687
 ignore = "H006,H030,H031,T002"
 include = "H017,H035"
 indent = 2
@@ -96,7 +96,6 @@ js.indent_size = 2
 
 # ==== ruff ====
 [tool.ruff]
-# Exclude a variety of commonly ignored directories.
 extend-exclude = [
   "*/migrations/*.py",
   "staticfiles/*",
@@ -153,20 +152,15 @@ lint.select = [
   "YTT",
 ]
 lint.ignore = [
-  "RUF012", # Mutable class attributes should be annotated with `typing.ClassVar`
-  "S101",   # Use of assert detected https://docs.astral.sh/ruff/rules/assert/
-  "SIM102", # sometimes it's better to nest
-  # of types for comparison.
-  # Deactivated because it can make the code slow:
-  # https://github.com/astral-sh/ruff/issues/7871
+  "RUF012",
+  "S101",
+  "SIM102",
 ]
 lint.isort.force-single-line = true
 
-# ==== pyproject-fmt ====
 [tool.pyproject-fmt]
 keep_full_version = true
 
-# ==== pytest ====
 [tool.pytest]
 addopts = [
   "--ds=config.settings.test",
@@ -179,13 +173,11 @@ python_files = [
   "test_*.py",
 ]
 
-# ==== Coverage ====
 [tool.coverage.run]
 include = [ "django_template/**" ]
 omit = [ "*/migrations/*", "*/tests/*" ]
 plugins = [ "django_coverage_plugin" ]
 
-# ==== mypy ====
 [tool.mypy]
 python_version = "3.14"
 check_untyped_defs = true
@@ -199,7 +191,6 @@ plugins = [
 ]
 
 [[tool.mypy.overrides]]
-# Django migrations should not produce any errors:
 module = "*.migrations.*"
 ignore_errors = true
 
