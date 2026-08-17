@@ -6,6 +6,7 @@ from django.utils.translation import gettext_lazy as _
 
 from .models import Invitation
 from .models import Tenant
+from .services import create_invitation
 
 
 User = get_user_model()
@@ -69,7 +70,6 @@ class InvitationForm(forms.ModelForm):
         return user
 
     def save(self, commit=True):
-        from .services import create_invitation
         if not commit:
             return super().save(commit=False)
         return create_invitation(
