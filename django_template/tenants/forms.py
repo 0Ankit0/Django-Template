@@ -3,7 +3,6 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.utils.text import slugify
 from django.utils.translation import gettext_lazy as _
-from tenant_users.tenants.models import ExistsError
 
 from .models import Invitation
 from .models import Tenant
@@ -17,7 +16,7 @@ class OrganizationCreateForm(forms.ModelForm):
         model = Tenant
         fields = ["name", "slug"]
         labels = {"slug": _("Subdomain")}
-        help_texts = {"slug": _("Used as <subdomain>.%(domain)s.")}
+        help_texts = {"slug": _("Used as <subdomain>.<tenant domain>.")}
 
     def __init__(self, *args, owner=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -29,7 +28,8 @@ class OrganizationCreateForm(forms.ModelForm):
         value = slugify(value)
         if not value:
             raise forms.ValidationError(_("Enter a valid organization name or subdomain."))
-        if Tenant.objects.filter(slug=value).exists():
+        schema_name = value.replace("-", "_")[:63]
+        if Tenant.objects.filter(slug=value).exists() or Tenant.objects.filter(schema_name=schema_name).exists():
             raise forms.ValidationError(_("That subdomain is already in use."))
         return value
 
@@ -38,8 +38,6 @@ class OrganizationCreateForm(forms.ModelForm):
         tenant = super().save(commit=False)
         tenant.owner = self.owner
         tenant.schema_name = self.cleaned_data["slug"].replace("-", "_")[:63]
-        if Tenant.objects.filter(schema_name=tenant.schema_name).exists():
-            raise forms.ValidationError(_("That subdomain is already in use."))
         if commit:
             tenant.save()
             tenant.add_user(self.owner, is_superuser=True)
