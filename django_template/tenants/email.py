@@ -74,6 +74,6 @@ class InvitationEmailAdapter:
         email: str,
         context: dict[str, Any],
         headers: dict[str, str] | None = None,
-    ) -> None:
+    ) -> int:
         message = self.render_mail(email, context, headers=headers)
-        message.send(fail_silently=False)
+        return message.send(fail_silently=False)
