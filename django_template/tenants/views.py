@@ -63,7 +63,14 @@ def invite_user(request):
                 return redirect("tenants:invite-user")
     else:
         form = InvitationForm(tenant=tenant, invited_by=request.user)
-    return render(request, "tenants/invite_user.html", {"form": form, "tenant": tenant})
+    pending_invitations = tenant.invitations.filter(
+        status=Invitation.Status.PENDING,
+    ).select_related("user")
+    return render(
+        request,
+        "tenants/invite_user.html",
+        {"form": form, "tenant": tenant, "pending_invitations": pending_invitations},
+    )
 
 
 @login_required
@@ -86,7 +93,10 @@ def resend_invitation(request, token):
 
 @login_required
 def invitation_accept(request, token):
-    invitation = get_object_or_404(Invitation.objects.select_related("tenant", "user"), token=token)
+    invitation = get_object_or_404(
+        Invitation.objects.select_related("tenant", "user"),
+        token=token,
+    )
     if invitation.user_id != request.user.id:
         raise Http404
     if request.method == "POST":
