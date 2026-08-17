@@ -22,15 +22,8 @@ class InvitationAdminForm(forms.ModelForm):
         cleaned = super().clean()
         tenant = cleaned.get("tenant")
         user = cleaned.get("user")
-        if tenant and user:
-            if tenant.user_set.filter(pk=user.pk).exists():
-                self.add_error("user", _("This user is already a member of the tenant."))
-            elif Invitation.objects.filter(
-                tenant=tenant,
-                user=user,
-                status=Invitation.Status.PENDING,
-            ).exclude(pk=self.instance.pk).exists():
-                self.add_error("user", _("There is already a pending invitation for this user."))
+        if tenant and user and tenant.user_set.filter(pk=user.pk).exists():
+            self.add_error("user", _("This user is already a member of the tenant."))
         return cleaned
 
 
@@ -56,7 +49,6 @@ class InvitationAdmin(ModelAdmin):
         "status",
         "expires_at",
         "sent_at",
-        "send_count",
     ]
     list_filter = ["status", "tenant"]
     search_fields = ["tenant__name", "user__email", "invited_by__email"]
@@ -65,7 +57,6 @@ class InvitationAdmin(ModelAdmin):
         "status",
         "invited_by",
         "sent_at",
-        "send_count",
         "accepted_at",
         "declined_at",
         "created_at",
@@ -79,10 +70,7 @@ class InvitationAdmin(ModelAdmin):
         sent = 0
         skipped = 0
         for invitation in queryset.select_related("tenant", "user", "invited_by"):
-            if (
-                invitation.status != Invitation.Status.PENDING
-                or invitation.expires_at <= timezone.now()
-            ):
+            if invitation.status != Invitation.Status.PENDING or invitation.expires_at <= timezone.now():
                 skipped += 1
                 continue
             try:
@@ -94,11 +82,7 @@ class InvitationAdmin(ModelAdmin):
                     level=messages.ERROR,
                 )
         if sent:
-            self.message_user(
-                request,
-                _(f"Sent {sent} invitation notification(s)."),
-                level=messages.SUCCESS,
-            )
+            self.message_user(request, _(f"Sent {sent} invitation notification(s)."), level=messages.SUCCESS)
         if skipped:
             self.message_user(
                 request,
