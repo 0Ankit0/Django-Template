@@ -74,7 +74,7 @@ INSTALLED_APPS += ["django_extensions"]
 
 # Billing
 # ------------------------------------------------------------------------------
-INSTALLED_APPS += ["django_template.billing"]
+INSTALLED_APPS += []
 STRIPE_SECRET_KEY = env.str("STRIPE_SECRET_KEY", default="")
 STRIPE_PUBLISHABLE_KEY = env.str("STRIPE_PUBLISHABLE_KEY", default="")
 STRIPE_WEBHOOK_SECRET = env.str("STRIPE_WEBHOOK_SECRET", default="")

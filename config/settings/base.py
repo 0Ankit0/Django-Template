@@ -117,6 +117,7 @@ THIRD_PARTY_SHARED_APPS = [
     "corsheaders",
 
     "django_celery_beat",
+    "django_celery_results",
 ]
 THIRD_PARTY_TENANT_APPS = [
     "tenant_users.permissions",
@@ -133,7 +134,7 @@ LOCAL_SHARED_APPS = [
     "django_template.tenants",
     "django_template.users",
     "django_template.controlroom_sentry",
-    "django_template.billing"
+    "django_template.billing",
 ]
 LOCAL_TENANT_APPS: list[str] = []
 
