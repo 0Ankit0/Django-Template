@@ -3,6 +3,7 @@ volumes:
   django_template_local_postgres_data_backups: {}
   django_template_local_redis_data: {}
   django_template_local_python_venv: {}
+  django_template_local_floci_data: {}
 
 services:
   django: &django
@@ -14,25 +15,40 @@ services:
     depends_on:
       migrations:
         condition: service_completed_successfully
+      floci:
+        condition: service_healthy
+      aws-init:
+        condition: service_completed_successfully
     volumes:
       - django_template_local_python_venv:/app/.venv
       - .:/app:z
     env_file:
       - ./.envs/.local/.django
       - ./.envs/.local/.postgres
+    environment:
+      AWS_ENDPOINT_URL: http://floci:4566
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+      DJANGO_AWS_S3_REGION_NAME: us-east-1
+      DJANGO_AWS_STORAGE_BUCKET_NAME: django-template-media
     ports:
-      - '8000:8000'
+      - "8000:8000"
     command: ["/bin/bash", "/app/compose/local/django/start"]
 
   migrations:
-      <<: *django
-      image: django_template_local_migrations
-      container_name: django_template_local_migrations
-      depends_on:
-        postgres:
-          condition: service_healthy
-      ports: []
-      command: ["/bin/bash", "/app/compose/local/django/start-migrations"]
+    <<: *django
+    image: django_template_local_migrations
+    container_name: django_template_local_migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+      floci:
+        condition: service_healthy
+      aws-init:
+        condition: service_completed_successfully
+    ports: []
+    command: ["/bin/bash", "/app/compose/local/django/start-migrations"]
 
   tailwind:
     <<: *django
@@ -79,6 +95,44 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+
+  floci:
+    image: floci/floci:latest
+    container_name: django_template_local_floci
+    environment:
+      FLOCI_HOSTNAME: floci
+      FLOCI_STORAGE_MODE: persistent
+      FLOCI_SERVICES_DOCKER_NETWORK: django-template_default
+    volumes:
+      - django_template_local_floci_data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    ports:
+      - "4566:4566"
+    healthcheck:
+      test: ["CMD", "sh", "-c", "wget -q -O - http://localhost:4566/_localstack/health >/dev/null"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 5s
+
+  aws-init:
+    image: floci/floci:latest-compat
+    container_name: django_template_local_aws_init
+    depends_on:
+      floci:
+        condition: service_healthy
+    environment:
+      AWS_ENDPOINT_URL: http://floci:4566
+      AWS_DEFAULT_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: test
+      AWS_SECRET_ACCESS_KEY: test
+    command: >-
+      sh -c "
+      until aws --endpoint-url http://floci:4566 sts get-caller-identity >/dev/null 2>&1; do sleep 1; done;
+      aws --endpoint-url http://floci:4566 s3api head-bucket --bucket django-template-media >/dev/null 2>&1 ||
+      aws --endpoint-url http://floci:4566 s3api create-bucket --bucket django-template-media;
+      exit 0"
+    restart: "no"
 
   celeryworker:
     <<: *django
