@@ -14,7 +14,6 @@ classifiers = [
 ]
 dependencies = [
   "argon2-cffi==25.1.0",
-  "boto3==1.42.19",
   "celery==5.6.3",
   "crispy-bootstrap5==2026.3",
   "dj-control-room[cache,celery,redis,urls]>=1.6.0",
