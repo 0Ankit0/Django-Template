@@ -9,7 +9,11 @@ class Command(BaseCommand):
     help = "Create or update the account Stripe webhook endpoint for billing events."
 
     def add_arguments(self, parser):
-        parser.add_argument("--url", required=True, help="Public HTTPS URL for /billing/webhooks/stripe/")
+        parser.add_argument(
+            "--url",
+            required=True,
+            help="Public HTTPS URL for /billing/webhooks/stripe/",
+        )
         parser.add_argument("--description", default="Django Template billing webhooks")
 
     def handle(self, *args, **options):
@@ -24,7 +28,14 @@ class Command(BaseCommand):
                 "environment": "local" if settings.DEBUG else "production",
             },
         }
-        existing = next((item for item in client.list({"limit": 100}).data if item.url.rstrip("/") == url), None)
+        existing = next(
+            (
+                item
+                for item in client.list({"limit": 100}).data
+                if item.url.rstrip("/") == url
+            ),
+            None,
+        )
         if existing:
             endpoint = client.update(existing.id, payload)
             action = "Updated"
@@ -38,7 +49,16 @@ class Command(BaseCommand):
         self.stdout.write(f"URL: {endpoint.url}")
         if secret:
             self.stdout.write("Webhook secret: " + str(secret))
-            self.stdout.write(self.style.WARNING("Store the returned secret as STRIPE_WEBHOOK_SECRET and never commit it."))
+            self.stdout.write(
+                self.style.WARNING(
+                    "Store the returned secret as STRIPE_WEBHOOK_SECRET and never commit it.",
+                ),
+            )
         else:
-            self.stdout.write(self.style.WARNING("Endpoint already existed; Stripe does not return the existing signing secret here. Keep your current STRIPE_WEBHOOK_SECRET."))
+            self.stdout.write(
+                self.style.WARNING(
+                    "Endpoint already existed; Stripe does not return the existing "
+                    "signing secret here. Keep your current STRIPE_WEBHOOK_SECRET.",
+                ),
+            )
         self.stdout.write("Enabled events: " + ", ".join(STRIPE_WEBHOOK_EVENTS))
