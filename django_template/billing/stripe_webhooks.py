@@ -4,7 +4,6 @@ from django.db import transaction
 from django.utils import timezone
 
 from .models import CheckoutSession
-from .models import Invoice
 from .models import Payment
 from .models import Provider
 from .models import Subscription
@@ -106,7 +105,7 @@ def process_stripe_webhook_event(webhook: WebhookEvent) -> None:
                         if payment:
                             create_or_update_one_time_subscription(payment, session.price)
 
-            elif event_type in {"checkout.session.async_payment_succeeded"}:
+            elif event_type == "checkout.session.async_payment_succeeded":
                 session = (
                     CheckoutSession.objects.filter(
                         provider=Provider.STRIPE,
@@ -150,8 +149,10 @@ def process_stripe_webhook_event(webhook: WebhookEvent) -> None:
                     provider_subscription_id=data.get("id", ""),
                 ).first()
                 if subscription:
-                    metadata = {**subscription.metadata, "pending_update_expired": True}
-                    subscription.metadata = metadata
+                    subscription.metadata = {
+                        **subscription.metadata,
+                        "pending_update_expired": True,
+                    }
                     subscription.save(update_fields=["metadata", "updated_at"])
 
             elif event_type == "customer.subscription.deleted":
@@ -163,7 +164,14 @@ def process_stripe_webhook_event(webhook: WebhookEvent) -> None:
                     subscription.status = Subscription.Status.CANCELED
                     subscription.cancel_at_period_end = False
                     subscription.canceled_at = _dt(data.get("canceled_at")) or timezone.now()
-                    subscription.save(update_fields=["status", "cancel_at_period_end", "canceled_at", "updated_at"])
+                    subscription.save(
+                        update_fields=[
+                            "status",
+                            "cancel_at_period_end",
+                            "canceled_at",
+                            "updated_at",
+                        ],
+                    )
 
             elif event_type.startswith("invoice."):
                 invoice = sync_invoice(data)
@@ -172,7 +180,10 @@ def process_stripe_webhook_event(webhook: WebhookEvent) -> None:
                     if event_type in {"invoice.paid", "invoice.payment_succeeded"}:
                         status = Payment.Status.SUCCEEDED
                         paid_at = timezone.now()
-                    elif event_type in {"invoice.payment_failed", "invoice.payment_action_required"}:
+                    elif event_type in {
+                        "invoice.payment_failed",
+                        "invoice.payment_action_required",
+                    }:
                         status = Payment.Status.FAILED if event_type == "invoice.payment_failed" else Payment.Status.PENDING
                         paid_at = None
                     else:
@@ -210,13 +221,23 @@ def process_stripe_webhook_event(webhook: WebhookEvent) -> None:
                     if price and price.is_one_time:
                         create_or_update_one_time_subscription(payment, price)
 
-            elif event_type in {"charge.refunded", "charge.refund.updated", "refund.created", "refund.updated", "refund.failed"}:
+            elif event_type in {
+                "charge.refunded",
+                "charge.refund.updated",
+                "refund.created",
+                "refund.updated",
+                "refund.failed",
+            }:
                 payment = _payment_from_refund(data)
                 if payment:
                     refund_status = data.get("status")
                     if event_type == "refund.failed" or refund_status == "failed":
                         payment.status = Payment.Status.PENDING
-                    elif data.get("refunded") or refund_status == "succeeded" or event_type in {"charge.refunded", "refund.updated", "refund.created"}:
+                    elif (
+                        data.get("refunded")
+                        or refund_status == "succeeded"
+                        or event_type in {"charge.refunded", "refund.updated", "refund.created"}
+                    ):
                         payment.status = Payment.Status.REFUNDED
                     payment.metadata = {**payment.metadata, "refund": data}
                     payment.save(update_fields=["status", "metadata", "updated_at"])
