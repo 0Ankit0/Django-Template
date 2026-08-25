@@ -16,7 +16,7 @@ class User(UserProfile):
 
     name = CharField(_("Name of User"), blank=True, max_length=255)
     avatar = models.ImageField(
-        upload_to="avatars/",
+        upload_to="avatars/source/",
         blank=True,
         null=True,
     )
@@ -50,7 +50,7 @@ class User(UserProfile):
         """Get URL for user's detail view.
 
         Returns:
-            str: URL for user detail.
+            str: URL for user's detail.
 
         """
         return reverse("users:detail", kwargs={"pk": self.pk})
