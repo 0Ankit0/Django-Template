@@ -26,11 +26,7 @@ def create_or_get_customer(tenant, email: str = "", name: str = "") -> BillingCu
         return customer
 
     stripe_customer = _stripe_client().v1.customers.create(
-        {
-            "email": email or None,
-            "name": name or None,
-            "metadata": {"tenant_id": str(tenant.pk)},
-        },
+        {"email": email or None, "name": name or None, "metadata": {"tenant_id": str(tenant.pk)}}
     )
     return BillingCustomer.objects.create(
         tenant=tenant,
@@ -53,6 +49,7 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
     mode = "subscription" if price.is_recurring else "payment"
     success_url = request.build_absolute_uri("/billing/success/") + "?session_id={CHECKOUT_SESSION_ID}"
     cancel_url = request.build_absolute_uri("/billing/pricing/")
+    metadata = {"tenant_id": str(tenant.pk), "price_id": str(price.pk)}
     payload: dict[str, Any] = {
         "mode": mode,
         "customer": customer.provider_customer_id,
@@ -60,12 +57,12 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
         "success_url": success_url,
         "cancel_url": cancel_url,
         "client_reference_id": str(tenant.pk),
-        "metadata": {"tenant_id": str(tenant.pk), "price_id": str(price.pk)},
+        "metadata": metadata,
     }
     if price.is_recurring:
-        payload["subscription_data"] = {
-            "metadata": {"tenant_id": str(tenant.pk), "price_id": str(price.pk)},
-        }
+        payload["subscription_data"] = {"metadata": metadata}
+    else:
+        payload["payment_intent_data"] = {"metadata": metadata}
 
     stripe_session = _stripe_client().v1.checkout.sessions.create(payload)
     data = _stripe_dict(stripe_session)
@@ -77,5 +74,5 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
         mode=mode,
         status=data.get("status", "open"),
         url=data.get("url", ""),
-        metadata=data.get("metadata") or {},
+        metadata=data.get("metadata") or metadata,
     )
