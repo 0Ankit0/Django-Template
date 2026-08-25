@@ -225,7 +225,7 @@ class Entitlement(models.Model):
     class Meta:
         ordering = ["-created_at"]
         constraints = [models.UniqueConstraint(fields=["provider", "provider_reference"], name="billing_entitlement_provider_reference_unique")]
-        indexes = [models.Index(fields=["tenant", "active", "expires_at"])]
+        indexes = [models.Index(fields=["tenant", "active", "expires_at"], name="billing_ent_tenant_5b6b2a_idx")]
     def __str__(self) -> str: return f"{self.tenant} - {self.price.product} until {self.expires_at.isoformat()}"
 
 
