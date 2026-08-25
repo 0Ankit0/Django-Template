@@ -44,6 +44,25 @@
         </c-alert>
       {% endif %}
 
+      {% if provider == "khalti" or provider == "esewa" %}
+        {% if invoice and invoice.invoice_pdf %}
+          <c-card>
+            <c-card.content class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between py-4">
+              <div>
+                <div class="font-medium">Invoice {{ invoice.number }}</div>
+                <div class="text-sm text-muted-foreground">Your invoice PDF is ready.</div>
+              </div>
+              <a href="{{ invoice.invoice_pdf }}"><c-button variant="outline">Download invoice</c-button></a>
+            </c-card.content>
+          </c-card>
+        {% else %}
+          <c-alert>
+            <c-alert.title>Invoice is being generated</c-alert.title>
+            <c-alert.description>Your payment is complete. The invoice PDF is generated in the background and will appear in your billing dashboard.</c-alert.description>
+          </c-alert>
+        {% endif %}
+      {% endif %}
+
       {% if session_id %}
         <div class="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
           Checkout session: {{ session_id }}
