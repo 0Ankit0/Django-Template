@@ -17,7 +17,9 @@ from .base import env
 
 # GENERAL
 # ------------------------------------------------------------------------------
+# https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
 SECRET_KEY = env("DJANGO_SECRET_KEY")
+# https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
 ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["example.com"])
 
 # DATABASES
@@ -32,6 +34,8 @@ CACHES = {
         "LOCATION": REDIS_URL,
         "OPTIONS": {
             "CLIENT_CLASS": "django_redis.client.DefaultClient",
+            # Mimicking memcache behavior.
+            # https://github.com/jazzband/django-redis#memcached-exceptions-behavior
             "IGNORE_EXCEPTIONS": True,
         },
     },
@@ -58,7 +62,9 @@ AWS_SESSION_TOKEN = env("AWS_SESSION_TOKEN", default="")
 AWS_STORAGE_BUCKET_NAME = env("DJANGO_AWS_STORAGE_BUCKET_NAME")
 AWS_QUERYSTRING_AUTH = False
 _AWS_EXPIRY = 60 * 60 * 24 * 7
-AWS_S3_OBJECT_PARAMETERS = {"CacheControl": f"max-age={_AWS_EXPIRY}, s-maxage={_AWS_EXPIRY}, must-revalidate"}
+AWS_S3_OBJECT_PARAMETERS = {
+    "CacheControl": f"max-age={_AWS_EXPIRY}, s-maxage={_AWS_EXPIRY}, must-revalidate",
+}
 AWS_S3_MAX_MEMORY_SIZE = env.int("DJANGO_AWS_S3_MAX_MEMORY_SIZE", default=100_000_000)
 AWS_S3_REGION_NAME = env("DJANGO_AWS_S3_REGION_NAME", default=None)
 AWS_REGION = AWS_S3_REGION_NAME or "us-east-1"
@@ -85,9 +91,15 @@ MEDIA_URL = f"https://{aws_s3_domain}/media/"
 
 # EMAIL
 # ------------------------------------------------------------------------------
-DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="django-template <noreply@example.com>")
+DEFAULT_FROM_EMAIL = env(
+    "DJANGO_DEFAULT_FROM_EMAIL",
+    default="django-template <noreply@example.com>",
+)
 SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
-EMAIL_SUBJECT_PREFIX = env("DJANGO_EMAIL_SUBJECT_PREFIX", default="[django-template] ")
+EMAIL_SUBJECT_PREFIX = env(
+    "DJANGO_EMAIL_SUBJECT_PREFIX",
+    default="[django-template] ",
+)
 ACCOUNT_EMAIL_SUBJECT_PREFIX = EMAIL_SUBJECT_PREFIX
 EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_PORT = env.int("EMAIL_PORT", default=587)
@@ -145,13 +157,31 @@ DJ_CONTROL_ROOM_SETTINGS = {
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": True,
-    "formatters": {"verbose": {"format": "%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s"}},
-    "handlers": {"console": {"level": "DEBUG", "class": "logging.StreamHandler", "formatter": "verbose"}},
+    "formatters": {
+        "verbose": {
+            "format": "%(levelname)s %(asctime)s %(module)s %(process)d %(thread)d %(message)s",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "DEBUG",
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
     "root": {"level": "INFO", "handlers": ["console"]},
     "loggers": {
-        "django.db.backends": {"level": "ERROR", "handlers": ["console"], "propagate": False},
+        "django.db.backends": {
+            "level": "ERROR",
+            "handlers": ["console"],
+            "propagate": False,
+        },
         "sentry_sdk": {"level": "ERROR", "handlers": ["console"], "propagate": False},
-        "django.security.DisallowedHost": {"level": "ERROR", "handlers": ["console"], "propagate": False},
+        "django.security.DisallowedHost": {
+            "level": "ERROR",
+            "handlers": ["console"],
+            "propagate": False,
+        },
     },
 }
 
@@ -164,15 +194,37 @@ SENTRY_ORG_SLUG = env("SENTRY_ORG_SLUG", default="")
 SENTRY_PROJECT_SLUG = env("SENTRY_PROJECT_SLUG", default="")
 SENTRY_AUTH_TOKEN = env("SENTRY_AUTH_TOKEN", default="")
 SENTRY_DEFAULT_ISSUES_QUERY = env("SENTRY_DEFAULT_ISSUES_QUERY", default="is:unresolved")
-sentry_logging = LoggingIntegration(level=SENTRY_LOG_LEVEL, event_level=logging.ERROR)
-integrations = [sentry_logging, DjangoIntegration(), CeleryIntegration(), RedisIntegration()]
-sentry_sdk.init(dsn=SENTRY_DSN, integrations=integrations, environment=env("SENTRY_ENVIRONMENT", default="production"), traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.0))
+
+sentry_logging = LoggingIntegration(
+    level=SENTRY_LOG_LEVEL,
+    event_level=logging.ERROR,
+)
+integrations = [
+    sentry_logging,
+    DjangoIntegration(),
+    CeleryIntegration(),
+    RedisIntegration(),
+]
+sentry_sdk.init(
+    dsn=SENTRY_DSN,
+    integrations=integrations,
+    environment=env("SENTRY_ENVIRONMENT", default="production"),
+    traces_sample_rate=env.float("SENTRY_TRACES_SAMPLE_RATE", default=0.0),
+)
 
 CELERY_BEAT_SCHEDULE = {
-    "retry-unprocessed-stripe-webhooks": {"task": "django_template.billing.tasks.retry_unprocessed_stripe_webhooks", "schedule": 30.0},
-    "expire-billing-entitlements": {"task": "django_template.billing.tasks.expire_entitlements", "schedule": 60.0},
+    "retry-unprocessed-stripe-webhooks": {
+        "task": "django_template.billing.tasks.retry_unprocessed_stripe_webhooks",
+        "schedule": 30.0,
+    },
+    "expire-billing-entitlements": {
+        "task": "django_template.billing.tasks.expire_entitlements",
+        "schedule": 60.0,
+    },
 }
 
 # django-rest-framework
 # -------------------------------------------------------------------------------
-SPECTACULAR_SETTINGS["SERVERS"] = [{"url": "https://example.com", "description": "Production server"}]
+SPECTACULAR_SETTINGS["SERVERS"] = [
+    {"url": "https://example.com", "description": "Production server"},
+]
