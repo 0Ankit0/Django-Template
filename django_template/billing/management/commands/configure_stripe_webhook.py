@@ -1,27 +1,28 @@
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
-from django_template.billing.stripe_webhooks import STRIPE_WEBHOOK_EVENTS
 from django_template.billing.services import _stripe_client
+from django_template.billing.stripe_webhooks import STRIPE_WEBHOOK_EVENTS
 
 
 class Command(BaseCommand):
-    help = "Create or update the account Stripe webhook endpoint for billing events."
+    help = "Create the account Stripe webhook endpoint for billing events."
 
     def add_arguments(self, parser):
         parser.add_argument("--url", required=True, help="Public HTTPS URL for /billing/webhooks/stripe/")
         parser.add_argument("--description", default="Django Template billing webhooks")
 
     def handle(self, *args, **options):
-        client = _stripe_client()
-        url = options["url"].rstrip("/")
-        endpoint = client.v1.webhook_endpoints.create(
+        endpoint = _stripe_client().v1.webhook_endpoints.create(
             {
-                "url": url,
+                "url": options["url"].rstrip("/"),
                 "enabled_events": list(STRIPE_WEBHOOK_EVENTS),
                 "connect": False,
                 "description": options["description"],
-                "metadata": {"project": "django-template", "environment": settings.SENTRY_ENVIRONMENT},
+                "metadata": {
+                    "project": "django-template",
+                    "environment": "local" if settings.DEBUG else "production",
+                },
             },
         )
         self.stdout.write(self.style.SUCCESS(f"Created Stripe webhook endpoint {endpoint.id}"))
