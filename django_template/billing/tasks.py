@@ -32,7 +32,7 @@ def retry_unprocessed_stripe_webhooks() -> int:
     stale_before = timezone.now() - timedelta(minutes=10)
     ids = list(
         WebhookEvent.objects.filter(provider=Provider.STRIPE, processed=False)
-        .filter(Q(processing=False) | Q(processing=True, updated_at__lt=stale_before))
+        .filter(Q(processing=False) | Q(processing=True, created_at__lt=stale_before))
         .values_list("pk", flat=True)[:100]
     )
     for event_id in ids:
