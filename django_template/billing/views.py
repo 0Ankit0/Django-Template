@@ -11,9 +11,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
 
 from .checkout import create_checkout_session
-from .models import CheckoutSession, Payment, Price, Provider, ProviderConfiguration
+from .models import CheckoutSession, Payment, Price, Provider, ProviderConfiguration, WebhookEvent
 from .providers import create_esewa_checkout, create_khalti_checkout, esewa_status, khalti_lookup, verify_esewa_response
-from .services import cancel_subscription, create_portal_session, get_current_subscription, grant_expiring_entitlement, handle_webhook
+from .services import cancel_subscription, create_or_update_one_time_subscription, create_portal_session, get_current_subscription, handle_webhook
 
 
 def provider_enabled(provider: str) -> bool:
@@ -27,9 +27,9 @@ def enabled_providers(price: Price) -> list[tuple[str, str]]:
     providers = []
     if provider_enabled(Provider.STRIPE):
         providers.append((Provider.STRIPE, "Stripe"))
-    if provider_enabled(Provider.KHALTI) and price.currency.lower() == "npr" and not price.is_recurring:
+    if provider_enabled(Provider.KHALTI) and price.currency.lower() == "npr" and price.is_one_time:
         providers.append((Provider.KHALTI, "Khalti"))
-    if provider_enabled(Provider.ESEWA) and price.currency.lower() == "npr" and not price.is_recurring:
+    if provider_enabled(Provider.ESEWA) and price.currency.lower() == "npr" and price.is_one_time:
         providers.append((Provider.ESEWA, "eSewa"))
     return providers
 
@@ -91,7 +91,7 @@ def cancel(request: HttpRequest) -> HttpResponse:
     if not subscription:
         messages.info(request, "There is no active subscription to cancel.")
     elif subscription.provider != Provider.STRIPE:
-        messages.info(request, "Local-wallet payments are one-time in this template and do not have automatic cancellation.")
+        messages.info(request, "Local-wallet purchases expire automatically at their Price interval.")
     else:
         try:
             cancel_subscription(subscription, at_period_end=True)
@@ -107,13 +107,21 @@ def success(request: HttpRequest) -> HttpResponse:
     return render(request, "billing/success.html", {"session_id": request.GET.get("session_id", "")})
 
 
+def _record_provider_event(provider: str, event_id: str, event_type: str, payload: dict) -> WebhookEvent:
+    event, _ = WebhookEvent.objects.get_or_create(provider=provider, event_id=event_id, defaults={"event_type": event_type, "payload": payload})
+    return event
+
+
 @csrf_exempt
 @require_GET
 def khalti_callback(request: HttpRequest) -> HttpResponse:
     pidx = request.GET.get("pidx", "")
     session = get_object_or_404(CheckoutSession, provider=Provider.KHALTI, provider_session_id=pidx)
     result = khalti_lookup(pidx)
+    webhook = _record_provider_event(Provider.KHALTI, pidx, "payment.completed", {"query": request.GET.dict(), "lookup": result})
     if result.get("purchase_order_id") != session.metadata.get("purchase_order_id"):
+        webhook.error = "Khalti order mismatch"
+        webhook.save(update_fields=["error"])
         messages.error(request, "Khalti payment does not match the checkout order.")
         return redirect("billing:dashboard")
     verified = result.get("status") == "Completed" and int(result.get("total_amount") or 0) == session.price.amount
@@ -122,10 +130,15 @@ def khalti_callback(request: HttpRequest) -> HttpResponse:
         session.status = "complete"
         session.completed_at = timezone.now()
         session.save(update_fields=["status", "completed_at"])
-        if session.price.is_expiring_purchase:
-            grant_expiring_entitlement(payment, session.price)
+        create_or_update_one_time_subscription(payment, session.price, provider_reference=pidx)
+        webhook.processed = True
+        webhook.processed_at = timezone.now()
+        webhook.save(update_fields=["processed", "processed_at"])
         messages.success(request, "Khalti payment completed successfully.")
     else:
+        webhook.processed = True
+        webhook.processed_at = timezone.now()
+        webhook.save(update_fields=["processed", "processed_at"])
         messages.error(request, f"Khalti payment was not completed: {result.get('status', 'Unknown status')}.")
     return redirect("billing:dashboard")
 
@@ -140,6 +153,7 @@ def esewa_callback(request: HttpRequest) -> HttpResponse:
     try:
         data = verify_esewa_response(encoded)
         session = get_object_or_404(CheckoutSession, provider=Provider.ESEWA, provider_session_id=data["transaction_uuid"])
+        webhook = _record_provider_event(Provider.ESEWA, data["transaction_uuid"], "payment.completed", {"query": request.GET.dict(), "verified_response": data})
         expected = f"{session.price.amount / 100:.2f}"
         verified = data.get("status") == "COMPLETE" and data.get("product_code") == session.metadata.get("product_code") and Decimal(str(data.get("total_amount"))) == Decimal(expected)
         if verified:
@@ -149,10 +163,16 @@ def esewa_callback(request: HttpRequest) -> HttpResponse:
             session.status = "complete"
             session.completed_at = timezone.now()
             session.save(update_fields=["status", "completed_at"])
-            if session.price.is_expiring_purchase:
-                grant_expiring_entitlement(payment, session.price)
+            create_or_update_one_time_subscription(payment, session.price, provider_reference=data["transaction_uuid"])
+            webhook.processed = True
+            webhook.processed_at = timezone.now()
+            webhook.save(update_fields=["processed", "processed_at"])
             messages.success(request, "eSewa payment completed successfully.")
         else:
+            webhook.error = "eSewa payment could not be verified"
+            webhook.processed = True
+            webhook.processed_at = timezone.now()
+            webhook.save(update_fields=["processed", "processed_at", "error"])
             messages.error(request, "eSewa payment could not be verified.")
     except Exception:
         messages.error(request, "Invalid or unverifiable eSewa payment response.")
