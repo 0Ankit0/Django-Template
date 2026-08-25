@@ -10,7 +10,7 @@ from django.utils import timezone
 from .models import Provider
 from .models import WebhookEvent
 from .services import expire_one_time_subscriptions
-from .services import process_webhook_event
+from .stripe_webhooks import process_stripe_webhook_event
 
 
 @shared_task(
@@ -23,7 +23,7 @@ from .services import process_webhook_event
 def process_stripe_webhook(self, webhook_event_id: int) -> None:
     close_old_connections()
     event = WebhookEvent.objects.get(pk=webhook_event_id, provider=Provider.STRIPE)
-    process_webhook_event(event)
+    process_stripe_webhook_event(event)
 
 
 @shared_task
