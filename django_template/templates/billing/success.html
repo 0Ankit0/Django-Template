@@ -1,18 +1,58 @@
 {% extends "base.html" %}
 
+{% block title %}Payment successful · django-template{% endblock title %}
+
 {% block content %}
-<div class="mx-auto max-w-xl py-16">
-  <c-card>
-    <c-card.header>
-      <c-card.title>Checkout submitted</c-card.title>
-      <c-card.description>Your billing provider is processing the payment.</c-card.description>
+<div class="mx-auto max-w-2xl py-10 sm:py-16">
+  <c-card class="overflow-hidden">
+    <c-card.header class="border-b bg-muted/30">
+      <div class="flex items-center gap-4">
+        <div class="flex size-12 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">
+          <span class="text-2xl">✓</span>
+        </div>
+        <div>
+          <c-card.title class="text-2xl">Payment received</c-card.title>
+          <c-card.description>
+            {% if provider == "khalti" %}Khalti{% elif provider == "esewa" %}eSewa{% else %}Stripe{% endif %} confirmed the checkout flow.
+          </c-card.description>
+        </div>
+      </div>
     </c-card.header>
-    <c-card.content class="space-y-4 text-sm">
-      <p>Subscription state is updated from verified provider webhooks, not from this page.</p>
-      {% if session_id %}<p class="text-muted-foreground">Checkout session: {{ session_id }}</p>{% endif %}
+    <c-card.content class="space-y-5 py-6">
+      <c-alert variant="success">
+        <c-alert.title>Thanks — we have your payment.</c-alert.title>
+        <c-alert.description>
+          Your account is updated from verified provider callbacks/webhooks. This page does not grant access by itself.
+        </c-alert.description>
+      </c-alert>
+
+      {% if subscription %}
+        <div class="rounded-xl border p-4">
+          <div class="text-sm font-medium">{{ subscription.price.product.name }}</div>
+          <div class="mt-1 text-sm text-muted-foreground">
+            {% if subscription.cancel_at_period_end %}
+              Active until {{ subscription.current_period_end|date:"M j, Y, P" }}
+            {% else %}
+              Subscription status: {{ subscription.get_status_display }}
+            {% endif %}
+          </div>
+        </div>
+      {% elif session %}
+        <c-alert variant="warning">
+          <c-alert.title>Payment is still being finalized.</c-alert.title>
+          <c-alert.description>Refresh your billing dashboard in a moment. Stripe webhook processing is asynchronous.</c-alert.description>
+        </c-alert>
+      {% endif %}
+
+      {% if session_id %}
+        <div class="rounded-xl border border-dashed p-4 text-xs text-muted-foreground">
+          Checkout session: {{ session_id }}
+        </div>
+      {% endif %}
     </c-card.content>
-    <c-card.footer>
-      <a href="{% url 'billing:dashboard' %}"><c-button>Open billing</c-button></a>
+    <c-card.footer class="flex flex-col gap-3 sm:flex-row sm:justify-between">
+      <a href="{% url 'billing:dashboard' %}"><c-button class="w-full sm:w-auto">Open billing dashboard</c-button></a>
+      <a href="{% url 'billing:pricing' %}"><c-button variant="outline" class="w-full sm:w-auto">View plans</c-button></a>
     </c-card.footer>
   </c-card>
 </div>
