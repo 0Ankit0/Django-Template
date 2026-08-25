@@ -209,6 +209,7 @@ class Invoice(models.Model):
     currency = models.CharField(max_length=3, default="npr")
     hosted_invoice_url = models.URLField(blank=True)
     invoice_pdf = models.URLField(blank=True)
+    invoice_file = models.FileField(upload_to="billing/invoices/", blank=True)
     period_start = models.DateTimeField(null=True, blank=True)
     period_end = models.DateTimeField(null=True, blank=True)
     paid_at = models.DateTimeField(null=True, blank=True)
