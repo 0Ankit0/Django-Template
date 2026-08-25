@@ -4,14 +4,22 @@ from decimal import Decimal
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.http import HttpRequest, HttpResponse, JsonResponse
-from django.shortcuts import get_object_or_404, redirect, render
+from django.core.files.storage import default_storage
+from django.http import FileResponse
+from django.http import HttpRequest
+from django.http import HttpResponse
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404
+from django.shortcuts import redirect
+from django.shortcuts import render
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET
+from django.views.decorators.http import require_POST
 
 from .checkout import create_checkout_session
 from .models import CheckoutSession
+from .models import Invoice
 from .models import Payment
 from .models import Price
 from .models import Provider
@@ -27,6 +35,7 @@ from .services import create_or_update_one_time_subscription
 from .services import create_portal_session
 from .services import get_current_subscription
 from .services import handle_webhook
+from .tasks import generate_local_invoice
 
 
 def provider_enabled(provider: str) -> bool:
@@ -86,10 +95,7 @@ def checkout(request: HttpRequest, price_id: int) -> HttpResponse:
         messages.error(request, "That payment provider is not available for this price.")
         return redirect("billing:pricing")
     if price.is_recurring and get_current_subscription(request.tenant):
-        messages.info(
-            request,
-            "Your tenant already has an active subscription. Use the billing portal to manage it.",
-        )
+        messages.info(request, "Your tenant already has an active subscription. Use the billing portal to manage it.")
         return redirect("billing:dashboard")
     try:
         if provider == Provider.STRIPE:
@@ -160,27 +166,33 @@ def success(request: HttpRequest) -> HttpResponse:
     session = None
     payment = None
     subscription = None
+    invoice = None
     if session_id:
         session = (
-            CheckoutSession.objects.filter(
-                provider=Provider.STRIPE,
-                provider_session_id=session_id,
-            )
+            CheckoutSession.objects.filter(provider=Provider.STRIPE, provider_session_id=session_id)
             .select_related("price")
             .first()
         )
         if session:
             payment_intent = session.metadata.get("payment_intent")
             if payment_intent:
-                payment = (
-                    Payment.objects.filter(
-                        provider=Provider.STRIPE,
-                        provider_payment_id=payment_intent,
-                    )
-                    .select_related("subscription")
-                    .first()
-                )
+                payment = Payment.objects.filter(provider=Provider.STRIPE, provider_payment_id=payment_intent).select_related("subscription").first()
             subscription = payment.subscription if payment else None
+    if provider in {Provider.KHALTI, Provider.ESEWA}:
+        payment = (
+            Payment.objects.filter(provider=provider, tenant=request.tenant, status=Payment.Status.SUCCEEDED)
+            .select_related("subscription")
+            .order_by("-created_at")
+            .first()
+        )
+        subscription = payment.subscription if payment else None
+        invoice = (
+            Invoice.objects.filter(provider=provider, tenant=request.tenant, status=Invoice.Status.PAID)
+            .order_by("-created_at")
+            .first()
+        )
+    if payment and not invoice:
+        invoice = Invoice.objects.filter(subscription=payment.subscription, provider=payment.provider).order_by("-created_at").first()
     return render(
         request,
         "billing/success.html",
@@ -190,6 +202,7 @@ def success(request: HttpRequest) -> HttpResponse:
             "session": session,
             "payment": payment,
             "subscription": subscription,
+            "invoice": invoice,
         },
     )
 
@@ -199,6 +212,20 @@ def success(request: HttpRequest) -> HttpResponse:
 def cancelled(request: HttpRequest) -> HttpResponse:
     provider = request.GET.get("provider", Provider.STRIPE)
     return render(request, "billing/cancel.html", {"provider": provider})
+
+
+@login_required
+@require_GET
+def invoice_download(request: HttpRequest, invoice_id: int) -> HttpResponse:
+    invoice = get_object_or_404(Invoice, pk=invoice_id, tenant=request.tenant)
+    if not invoice.invoice_file:
+        return HttpResponse("Invoice PDF is not ready yet.", status=404)
+    return FileResponse(
+        default_storage.open(invoice.invoice_file.name, "rb"),
+        as_attachment=True,
+        filename=f"{invoice.number or invoice.provider_invoice_id}.pdf",
+        content_type="application/pdf",
+    )
 
 
 def _record_provider_event(provider: str, event_id: str, event_type: str, payload: dict) -> WebhookEvent:
@@ -214,11 +241,7 @@ def _record_provider_event(provider: str, event_id: str, event_type: str, payloa
 @require_GET
 def khalti_callback(request: HttpRequest) -> HttpResponse:
     pidx = request.GET.get("pidx", "")
-    session = get_object_or_404(
-        CheckoutSession,
-        provider=Provider.KHALTI,
-        provider_session_id=pidx,
-    )
+    session = get_object_or_404(CheckoutSession, provider=Provider.KHALTI, provider_session_id=pidx)
     result = khalti_lookup(pidx)
     webhook = _record_provider_event(
         Provider.KHALTI,
@@ -230,10 +253,7 @@ def khalti_callback(request: HttpRequest) -> HttpResponse:
         webhook.error = "Khalti order mismatch"
         webhook.save(update_fields=["error"])
         return redirect(f"{request.build_absolute_uri('/billing/cancelled/')}?provider=khalti")
-    verified = (
-        result.get("status") == "Completed"
-        and int(result.get("total_amount") or 0) == session.price.amount
-    )
+    verified = result.get("status") == "Completed" and int(result.get("total_amount") or 0) == session.price.amount
     payment, _ = Payment.objects.update_or_create(
         provider=Provider.KHALTI,
         provider_payment_id=str(result.get("transaction_id") or pidx),
@@ -254,6 +274,7 @@ def khalti_callback(request: HttpRequest) -> HttpResponse:
         session.save(update_fields=["status", "completed_at"])
         create_or_update_one_time_subscription(payment, session.price, provider_reference=pidx)
         webhook.save(update_fields=["processed", "processed_at"])
+        generate_local_invoice.delay(payment.pk, request.build_absolute_uri("/billing"))
         return redirect(f"{request.build_absolute_uri('/billing/success/')}?provider=khalti")
     webhook.error = f"Khalti payment failed: {result.get('status', 'Unknown status')}"
     webhook.save(update_fields=["processed", "processed_at", "error"])
@@ -268,11 +289,7 @@ def esewa_callback(request: HttpRequest) -> HttpResponse:
         return redirect(f"{request.build_absolute_uri('/billing/cancelled/')}?provider=esewa")
     try:
         data = verify_esewa_response(encoded)
-        session = get_object_or_404(
-            CheckoutSession,
-            provider=Provider.ESEWA,
-            provider_session_id=data["transaction_uuid"],
-        )
+        session = get_object_or_404(CheckoutSession, provider=Provider.ESEWA, provider_session_id=data["transaction_uuid"])
         webhook = _record_provider_event(
             Provider.ESEWA,
             data["transaction_uuid"],
@@ -280,21 +297,12 @@ def esewa_callback(request: HttpRequest) -> HttpResponse:
             {"query": request.GET.dict(), "verified_response": data},
         )
         expected = f"{session.price.amount / 100:.2f}"
-        verified = (
-            data.get("status") == "COMPLETE"
-            and data.get("product_code") == session.metadata.get("product_code")
-            and Decimal(str(data.get("total_amount"))) == Decimal(expected)
-        )
+        verified = data.get("status") == "COMPLETE" and data.get("product_code") == session.metadata.get("product_code") and Decimal(str(data.get("total_amount"))) == Decimal(expected)
         if verified:
-            verified = esewa_status(
-                data["transaction_uuid"],
-                expected,
-            ).get("status") == "COMPLETE"
+            verified = esewa_status(data["transaction_uuid"], expected).get("status") == "COMPLETE"
         payment, _ = Payment.objects.update_or_create(
             provider=Provider.ESEWA,
-            provider_payment_id=str(
-                data.get("transaction_code") or data["transaction_uuid"]
-            ),
+            provider_payment_id=str(data.get("transaction_code") or data["transaction_uuid"]),
             defaults={
                 "tenant": session.tenant,
                 "amount": session.price.amount,
@@ -310,12 +318,9 @@ def esewa_callback(request: HttpRequest) -> HttpResponse:
             session.status = "complete"
             session.completed_at = timezone.now()
             session.save(update_fields=["status", "completed_at"])
-            create_or_update_one_time_subscription(
-                payment,
-                session.price,
-                provider_reference=data["transaction_uuid"],
-            )
+            create_or_update_one_time_subscription(payment, session.price, provider_reference=data["transaction_uuid"])
             webhook.save(update_fields=["processed", "processed_at"])
+            generate_local_invoice.delay(payment.pk, request.build_absolute_uri("/billing"))
             return redirect(f"{request.build_absolute_uri('/billing/success/')}?provider=esewa")
         webhook.error = "eSewa payment could not be verified"
         webhook.save(update_fields=["processed", "processed_at", "error"])
