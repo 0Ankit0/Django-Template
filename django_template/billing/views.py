@@ -5,6 +5,7 @@ from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.files.storage import default_storage
+from django.db import transaction
 from django.http import FileResponse
 from django.http import HttpRequest
 from django.http import HttpResponse
@@ -186,11 +187,13 @@ def success(request: HttpRequest) -> HttpResponse:
             .first()
         )
         subscription = payment.subscription if payment else None
-        invoice = (
-            Invoice.objects.filter(provider=provider, tenant=request.tenant, status=Invoice.Status.PAID)
-            .order_by("-created_at")
-            .first()
-        )
+        if payment:
+            invoice = (
+                Invoice.objects.filter(provider=provider, provider_invoice_id=payment.provider_invoice_id)
+                .first()
+                if payment.provider_invoice_id
+                else None
+            )
     if payment and not invoice:
         invoice = Invoice.objects.filter(subscription=payment.subscription, provider=payment.provider).order_by("-created_at").first()
     return render(
@@ -237,6 +240,10 @@ def _record_provider_event(provider: str, event_id: str, event_type: str, payloa
     return event
 
 
+def _enqueue_local_invoice(payment_id: int, billing_base_url: str) -> None:
+    transaction.on_commit(lambda: generate_local_invoice.delay(payment_id, billing_base_url))
+
+
 @csrf_exempt
 @require_GET
 def khalti_callback(request: HttpRequest) -> HttpResponse:
@@ -274,7 +281,7 @@ def khalti_callback(request: HttpRequest) -> HttpResponse:
         session.save(update_fields=["status", "completed_at"])
         create_or_update_one_time_subscription(payment, session.price, provider_reference=pidx)
         webhook.save(update_fields=["processed", "processed_at"])
-        generate_local_invoice.delay(payment.pk, request.build_absolute_uri("/billing"))
+        _enqueue_local_invoice(payment.pk, request.build_absolute_uri("/billing"))
         return redirect(f"{request.build_absolute_uri('/billing/success/')}?provider=khalti")
     webhook.error = f"Khalti payment failed: {result.get('status', 'Unknown status')}"
     webhook.save(update_fields=["processed", "processed_at", "error"])
@@ -320,7 +327,7 @@ def esewa_callback(request: HttpRequest) -> HttpResponse:
             session.save(update_fields=["status", "completed_at"])
             create_or_update_one_time_subscription(payment, session.price, provider_reference=data["transaction_uuid"])
             webhook.save(update_fields=["processed", "processed_at"])
-            generate_local_invoice.delay(payment.pk, request.build_absolute_uri("/billing"))
+            _enqueue_local_invoice(payment.pk, request.build_absolute_uri("/billing"))
             return redirect(f"{request.build_absolute_uri('/billing/success/')}?provider=esewa")
         webhook.error = "eSewa payment could not be verified"
         webhook.save(update_fields=["processed", "processed_at", "error"])
