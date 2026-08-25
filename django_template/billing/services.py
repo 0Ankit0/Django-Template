@@ -158,7 +158,8 @@ def _price_from_event(data: dict[str, Any], *, session_id: str = "") -> Price | 
         if price:
             return price
     if session_id:
-        return CheckoutSession.objects.filter(provider=Provider.STRIPE, provider_session_id=session_id).values_list("price", flat=True).first() and Price.objects.filter(pk=CheckoutSession.objects.get(provider=Provider.STRIPE, provider_session_id=session_id).price_id).first()
+        session = CheckoutSession.objects.filter(provider=Provider.STRIPE, provider_session_id=session_id).select_related("price").first()
+        return session.price if session else None
     return None
 
 
@@ -167,10 +168,13 @@ def sync_payment_intent(data: dict[str, Any]) -> Payment | None:
     if not payment_id:
         return None
     customer_id = str(data.get("customer") or "")
+    metadata = data.get("metadata") or {}
     customer = BillingCustomer.objects.filter(provider=Provider.STRIPE, provider_customer_id=customer_id).select_related("tenant").first()
-    session = CheckoutSession.objects.filter(provider=Provider.STRIPE, metadata__payment_intent=payment_id).first()
+    session = CheckoutSession.objects.filter(provider=Provider.STRIPE, metadata__payment_intent=payment_id).select_related("tenant").first()
     if not customer and session:
         customer = BillingCustomer.objects.filter(tenant=session.tenant, provider=Provider.STRIPE).first()
+    if not customer and metadata.get("tenant_id"):
+        customer = BillingCustomer.objects.filter(tenant_id=metadata["tenant_id"], provider=Provider.STRIPE).select_related("tenant").first()
     if not customer:
         return None
     subscription = Subscription.objects.filter(provider=Provider.STRIPE, provider_customer_id=customer_id).order_by("-created_at").first()
@@ -184,8 +188,9 @@ def sync_payment_intent(data: dict[str, Any]) -> Payment | None:
     payment.amount = int(data.get("amount_received") or data.get("amount") or payment.amount)
     payment.currency = data.get("currency") or payment.currency
     payment.status = Payment.Status.SUCCEEDED if data.get("status") == "succeeded" else Payment.Status.FAILED if data.get("status") in {"requires_payment_method", "canceled"} else Payment.Status.PENDING
-    payment.paid_at = timezone.now() if payment.status == Payment.Status.SUCCEEDED and not payment.paid_at else payment.paid_at
-    payment.metadata = data.get("metadata") or payment.metadata
+    if payment.status == Payment.Status.SUCCEEDED and not payment.paid_at:
+        payment.paid_at = timezone.now()
+    payment.metadata = metadata or payment.metadata
     payment.save()
     return payment
 
@@ -193,14 +198,14 @@ def sync_payment_intent(data: dict[str, Any]) -> Payment | None:
 def grant_expiring_entitlement(payment: Payment, price: Price) -> Entitlement:
     if not price.is_expiring_purchase:
         raise ValueError("Only expiring prices can create expiring entitlements.")
-    existing = Entitlement.objects.filter(provider=Provider.STRIPE, provider_reference=payment.provider_payment_id).first()
+    existing = Entitlement.objects.filter(provider=payment.provider, provider_reference=payment.provider_payment_id).first()
     if existing:
         return existing
     starts_at = payment.paid_at or timezone.now()
     return Entitlement.objects.create(
         tenant=payment.tenant,
         price=price,
-        provider=Provider.STRIPE,
+        provider=payment.provider,
         provider_reference=payment.provider_payment_id,
         starts_at=starts_at,
         expires_at=_add_interval(starts_at, price.interval, price.interval_count),
@@ -216,7 +221,8 @@ def process_webhook_event(webhook: WebhookEvent) -> None:
         locked.processing = True
         locked.save(update_fields=["processing"])
     try:
-        process_webhook(locked.payload)
+        with transaction.atomic():
+            process_webhook(locked.payload)
     except Exception as exc:
         WebhookEvent.objects.filter(pk=locked.pk).update(processing=False, error=str(exc))
         raise
@@ -239,7 +245,7 @@ def process_webhook(event: dict[str, Any]) -> None:
                 payment = sync_payment_intent({"id": str(data["payment_intent"]), "customer": data.get("customer"), "amount": data.get("amount_total"), "currency": data.get("currency"), "status": "succeeded", "metadata": session.metadata})
                 if payment and session.price.is_expiring_purchase:
                     grant_expiring_entitlement(payment, session.price)
-    elif event_type in {"checkout.session.async_payment_succeeded"}:
+    elif event_type == "checkout.session.async_payment_succeeded":
         if data.get("payment_intent"):
             payment = sync_payment_intent({"id": str(data["payment_intent"]), "customer": data.get("customer"), "amount": data.get("amount_total"), "currency": data.get("currency"), "status": "succeeded", "metadata": data.get("metadata") or {}})
             session = CheckoutSession.objects.filter(provider=Provider.STRIPE, provider_session_id=data.get("id", "")).first()
@@ -265,16 +271,16 @@ def process_webhook(event: dict[str, Any]) -> None:
             Payment.objects.update_or_create(provider=Provider.STRIPE, provider_payment_id=str(data["payment_intent"]), defaults={"tenant": invoice.tenant, "subscription": invoice.subscription, "amount": int(data.get("amount_paid") or 0), "currency": data.get("currency") or "usd", "status": Payment.Status.SUCCEEDED, "provider_invoice_id": data["id"], "paid_at": timezone.now()})
         elif event_type == "invoice.payment_failed" and data.get("payment_intent"):
             Payment.objects.update_or_create(provider=Provider.STRIPE, provider_payment_id=str(data["payment_intent"]), defaults={"tenant": invoice.tenant, "subscription": invoice.subscription, "amount": int(data.get("amount_due") or 0), "currency": data.get("currency") or "usd", "status": Payment.Status.FAILED, "provider_invoice_id": data["id"]})
-    elif event_type in {"payment_intent.succeeded", "payment_intent.payment_failed", "payment_intent.canceled"}:
+    elif event_type in {"payment_intent.succeeded", "payment_intent.payment_failed", "payment_intent.canceled", "payment_intent.processing"}:
         payment = sync_payment_intent(data)
         if payment and payment.status == Payment.Status.SUCCEEDED:
             price = _price_from_event(data)
-            if price:
-                grant_expiring_entitlement(payment, price) if price.is_expiring_purchase else None
+            if price and price.is_expiring_purchase:
+                grant_expiring_entitlement(payment, price)
     elif event_type in {"charge.refunded", "charge.refund.updated"}:
         payment = Payment.objects.filter(provider=Provider.STRIPE, provider_payment_id=str(data.get("payment_intent") or "")).first()
         if payment:
-            payment.status = Payment.Status.REFUNDED if data.get("refunded") else Payment.Status.PARTIALLY_REFUNDED
+            payment.status = Payment.Status.REFUNDED if data.get("refunded") or data.get("status") == "succeeded" else Payment.Status.PARTIALLY_REFUNDED
             payment.save(update_fields=["status", "updated_at"])
 
 
