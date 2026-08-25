@@ -30,7 +30,6 @@ class Product(models.Model):
 
 class Price(models.Model):
     class Interval(models.TextChoices):
-        ONE_TIME = "one_time", _("One time")
         DAY = "day", _("Days")
         WEEK = "week", _("Weeks")
         MONTH = "month", _("Months")
@@ -52,12 +51,12 @@ class Price(models.Model):
         constraints = [models.CheckConstraint(condition=models.Q(interval_count__gte=1), name="billing_price_interval_count_positive")]
 
     @property
-    def is_recurring(self) -> bool:
-        return self.interval != self.Interval.ONE_TIME
+    def is_one_time(self) -> bool:
+        return bool(self.metadata.get("one_time", False))
 
     @property
-    def is_one_time(self) -> bool:
-        return self.interval == self.Interval.ONE_TIME
+    def is_recurring(self) -> bool:
+        return not self.is_one_time
 
     @property
     def amount_decimal(self) -> Decimal:
