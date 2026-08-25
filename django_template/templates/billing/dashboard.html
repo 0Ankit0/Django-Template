@@ -48,7 +48,7 @@
         <div class="space-y-3">
           {% for payment in payments %}
             <div class="flex items-center justify-between border-b pb-3 last:border-0">
-              <div><div class="font-medium">{{ payment.amount|floatformat:0 }} {{ payment.currency|upper }}</div><div class="text-xs text-muted-foreground">{{ payment.created_at }}</div></div>
+              <div><div class="font-medium">{{ payment.amount|floatformat:0 }} {{ payment.currency|upper }}</div><div class="text-xs text-muted-foreground">{{ payment.provider|upper }} · {{ payment.created_at }}</div></div>
               <span>{{ payment.get_status_display }}</span>
             </div>
           {% empty %}<p class="text-sm text-muted-foreground">No payments yet.</p>{% endfor %}
@@ -62,8 +62,17 @@
         <div class="space-y-3">
           {% for invoice in invoices %}
             <div class="flex items-center justify-between border-b pb-3 last:border-0">
-              <div><div class="font-medium">{{ invoice.number|default:invoice.provider_invoice_id }}</div><div class="text-xs text-muted-foreground">{{ invoice.amount_paid }} {{ invoice.currency|upper }}</div></div>
-              {% if invoice.hosted_invoice_url %}<a class="underline" href="{{ invoice.hosted_invoice_url }}" target="_blank" rel="noreferrer">Open</a>{% endif %}
+              <div>
+                <div class="font-medium">{{ invoice.number|default:invoice.provider_invoice_id }}</div>
+                <div class="text-xs text-muted-foreground">{{ invoice.amount_paid }} {{ invoice.currency|upper }} · {{ invoice.provider|upper }}</div>
+              </div>
+              {% if invoice.invoice_pdf %}
+                <a class="underline" href="{{ invoice.invoice_pdf }}">Download</a>
+              {% elif invoice.hosted_invoice_url %}
+                <a class="underline" href="{{ invoice.hosted_invoice_url }}" target="_blank" rel="noreferrer">Open</a>
+              {% else %}
+                <span class="text-xs text-muted-foreground">Preparing…</span>
+              {% endif %}
             </div>
           {% empty %}<p class="text-sm text-muted-foreground">No invoices yet.</p>{% endfor %}
         </div>
