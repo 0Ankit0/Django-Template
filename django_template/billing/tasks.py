@@ -24,6 +24,15 @@ def process_stripe_webhook(self, webhook_event_id: int) -> None:
 
 
 @shared_task
+def retry_unprocessed_stripe_webhooks() -> int:
+    close_old_connections()
+    ids = list(WebhookEvent.objects.filter(provider=Provider.STRIPE, processed=False, processing=False).values_list("pk", flat=True)[:100])
+    for event_id in ids:
+        process_stripe_webhook.delay(event_id)
+    return len(ids)
+
+
+@shared_task
 def expire_entitlements() -> int:
     close_old_connections()
     return Entitlement.objects.filter(active=True, expires_at__lte=timezone.now()).update(active=False, updated_at=timezone.now())
