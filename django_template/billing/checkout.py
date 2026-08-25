@@ -47,10 +47,14 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
     if not price.stripe_price_id:
         raise ValueError("This price has not been synchronized to Stripe yet.")
     tenant = request.tenant
-    customer = create_or_get_customer(tenant, email=getattr(request.user, "email", ""), name=getattr(request.user, "name", "") or str(request.user))
+    customer = create_or_get_customer(
+        tenant,
+        email=getattr(request.user, "email", ""),
+        name=getattr(request.user, "name", "") or str(request.user),
+    )
     mode = "payment" if price.is_one_time else "subscription"
-    success_url = request.build_absolute_uri("/billing/success/") + "?session_id={CHECKOUT_SESSION_ID}"
-    cancel_url = request.build_absolute_uri("/billing/pricing/")
+    success_url = request.build_absolute_uri("/billing/success/") + "?provider=stripe&session_id={CHECKOUT_SESSION_ID}"
+    cancel_url = request.build_absolute_uri(f"/billing/cancelled/?provider=stripe&price_id={price.pk}")
     metadata = {"tenant_id": str(tenant.pk), "price_id": str(price.pk)}
     payload: dict[str, Any] = {
         "mode": mode,
