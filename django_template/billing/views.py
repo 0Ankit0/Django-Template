@@ -68,7 +68,7 @@ def checkout(request: HttpRequest, price_id: int) -> HttpResponse:
             return redirect(result.redirect_url)
         result = create_esewa_checkout(request, price)
         CheckoutSession.objects.create(tenant=request.tenant, price=price, provider=provider, provider_session_id=result.reference, mode="payment", metadata={"provider": provider, **(result.metadata or {})})
-        return render(request, "billing/esewa_redirect.html", {"action": result.form_action, "fields": result.form_fields})
+        return render(request, "billing/esewa_redirect.html", {"action": result.form_action, "fields": result.form_fields, "provider": provider})
     except Exception as exc:
         messages.error(request, f"Unable to start payment: {exc}")
         return redirect("billing:pricing")
@@ -104,7 +104,36 @@ def cancel(request: HttpRequest) -> HttpResponse:
 @login_required
 @require_GET
 def success(request: HttpRequest) -> HttpResponse:
-    return render(request, "billing/success.html", {"session_id": request.GET.get("session_id", "")})
+    provider = request.GET.get("provider", Provider.STRIPE)
+    session_id = request.GET.get("session_id", "")
+    session = None
+    payment = None
+    subscription = None
+    if session_id:
+        session = CheckoutSession.objects.filter(provider=Provider.STRIPE, provider_session_id=session_id).select_related("price").first()
+        if session:
+            payment_intent = session.metadata.get("payment_intent")
+            if payment_intent:
+                payment = Payment.objects.filter(provider=Provider.STRIPE, provider_payment_id=payment_intent).select_related("subscription").first()
+            subscription = payment.subscription if payment else None
+    return render(
+        request,
+        "billing/success.html",
+        {
+            "provider": provider,
+            "session_id": session_id,
+            "session": session,
+            "payment": payment,
+            "subscription": subscription,
+        },
+    )
+
+
+@login_required
+@require_GET
+def cancelled(request: HttpRequest) -> HttpResponse:
+    provider = request.GET.get("provider", Provider.STRIPE)
+    return render(request, "billing/cancel.html", {"provider": provider})
 
 
 def _record_provider_event(provider: str, event_id: str, event_type: str, payload: dict) -> WebhookEvent:
@@ -122,25 +151,21 @@ def khalti_callback(request: HttpRequest) -> HttpResponse:
     if result.get("purchase_order_id") != session.metadata.get("purchase_order_id"):
         webhook.error = "Khalti order mismatch"
         webhook.save(update_fields=["error"])
-        messages.error(request, "Khalti payment does not match the checkout order.")
-        return redirect("billing:dashboard")
+        return redirect(f"{request.build_absolute_uri('/billing/cancelled/')}?provider=khalti")
     verified = result.get("status") == "Completed" and int(result.get("total_amount") or 0) == session.price.amount
     payment, _ = Payment.objects.update_or_create(provider=Provider.KHALTI, provider_payment_id=str(result.get("transaction_id") or pidx), defaults={"tenant": session.tenant, "amount": session.price.amount, "currency": "npr", "status": Payment.Status.SUCCEEDED if verified else Payment.Status.FAILED, "paid_at": timezone.now() if verified else None, "metadata": {"pidx": pidx, "status": result.get("status")}})
+    webhook.processed = True
+    webhook.processed_at = timezone.now()
     if verified:
         session.status = "complete"
         session.completed_at = timezone.now()
         session.save(update_fields=["status", "completed_at"])
         create_or_update_one_time_subscription(payment, session.price, provider_reference=pidx)
-        webhook.processed = True
-        webhook.processed_at = timezone.now()
         webhook.save(update_fields=["processed", "processed_at"])
-        messages.success(request, "Khalti payment completed successfully.")
-    else:
-        webhook.processed = True
-        webhook.processed_at = timezone.now()
-        webhook.save(update_fields=["processed", "processed_at"])
-        messages.error(request, f"Khalti payment was not completed: {result.get('status', 'Unknown status')}.")
-    return redirect("billing:dashboard")
+        return redirect(f"{request.build_absolute_uri('/billing/success/')}?provider=khalti")
+    webhook.error = f"Khalti payment failed: {result.get('status', 'Unknown status')}"
+    webhook.save(update_fields=["processed", "processed_at", "error"])
+    return redirect(f"{request.build_absolute_uri('/billing/cancelled/')}?provider=khalti")
 
 
 @csrf_exempt
@@ -148,8 +173,7 @@ def khalti_callback(request: HttpRequest) -> HttpResponse:
 def esewa_callback(request: HttpRequest) -> HttpResponse:
     encoded = request.GET.get("data", "")
     if not encoded:
-        messages.error(request, "No eSewa payment response was received.")
-        return redirect("billing:dashboard")
+        return redirect(f"{request.build_absolute_uri('/billing/cancelled/')}?provider=esewa")
     try:
         data = verify_esewa_response(encoded)
         session = get_object_or_404(CheckoutSession, provider=Provider.ESEWA, provider_session_id=data["transaction_uuid"])
@@ -159,24 +183,20 @@ def esewa_callback(request: HttpRequest) -> HttpResponse:
         if verified:
             verified = esewa_status(data["transaction_uuid"], expected).get("status") == "COMPLETE"
         payment, _ = Payment.objects.update_or_create(provider=Provider.ESEWA, provider_payment_id=str(data.get("transaction_code") or data["transaction_uuid"]), defaults={"tenant": session.tenant, "amount": session.price.amount, "currency": "npr", "status": Payment.Status.SUCCEEDED if verified else Payment.Status.FAILED, "paid_at": timezone.now() if verified else None, "metadata": data})
+        webhook.processed = True
+        webhook.processed_at = timezone.now()
         if verified:
             session.status = "complete"
             session.completed_at = timezone.now()
             session.save(update_fields=["status", "completed_at"])
             create_or_update_one_time_subscription(payment, session.price, provider_reference=data["transaction_uuid"])
-            webhook.processed = True
-            webhook.processed_at = timezone.now()
             webhook.save(update_fields=["processed", "processed_at"])
-            messages.success(request, "eSewa payment completed successfully.")
-        else:
-            webhook.error = "eSewa payment could not be verified"
-            webhook.processed = True
-            webhook.processed_at = timezone.now()
-            webhook.save(update_fields=["processed", "processed_at", "error"])
-            messages.error(request, "eSewa payment could not be verified.")
+            return redirect(f"{request.build_absolute_uri('/billing/success/')}?provider=esewa")
+        webhook.error = "eSewa payment could not be verified"
+        webhook.save(update_fields=["processed", "processed_at", "error"])
     except Exception:
-        messages.error(request, "Invalid or unverifiable eSewa payment response.")
-    return redirect("billing:dashboard")
+        pass
+    return redirect(f"{request.build_absolute_uri('/billing/cancelled/')}?provider=esewa")
 
 
 @csrf_exempt
