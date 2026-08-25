@@ -31,13 +31,14 @@ def create_or_get_customer(tenant, email: str = "", name: str = "") -> BillingCu
         options={"idempotency_key": f"billing-customer-{tenant.pk}"},
     )
     try:
-        return BillingCustomer.objects.create(
-            tenant=tenant,
-            provider=Provider.STRIPE,
-            provider_customer_id=str(stripe_customer.id),
-            email=email,
-            name=name,
-        )
+        with transaction.atomic():
+            return BillingCustomer.objects.create(
+                tenant=tenant,
+                provider=Provider.STRIPE,
+                provider_customer_id=str(stripe_customer.id),
+                email=email,
+                name=name,
+            )
     except IntegrityError:
         return BillingCustomer.objects.get(tenant=tenant, provider=Provider.STRIPE)
 
