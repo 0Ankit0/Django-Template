@@ -6,70 +6,33 @@ from .base import INSTALLED_APPS
 from .base import MIDDLEWARE
 from .base import env
 
-# GENERAL
-# ------------------------------------------------------------------------------
-# https://docs.djangoproject.com/en/dev/ref/settings/#debug
 DEBUG = True
-# https://docs.djangoproject.com/en/dev/ref/settings/#secret-key
-SECRET_KEY = env(
-    "DJANGO_SECRET_KEY"
-)
-# https://docs.djangoproject.com/en/dev/ref/settings/#allowed-hosts
+SECRET_KEY = env("DJANGO_SECRET_KEY")
 ALLOWED_HOSTS = ["localhost", ".localhost", "0.0.0.0", "127.0.0.1"]  # noqa: S104
 
-# CACHES
-# ------------------------------------------------------------------------------
-CACHES = {
-    "default": {
-        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
-        "LOCATION": "",
-    },
-}
-
-# EMAIL
-# ------------------------------------------------------------------------------
-EMAIL_BACKEND = env.str(
-    "DJANGO_EMAIL_BACKEND",
-    default="django.core.mail.backends.console.EmailBackend",
-)
+CACHES = {"default": {"BACKEND": "django.core.cache.backends.locmem.LocMemCache", "LOCATION": ""}}
+EMAIL_BACKEND = env.str("DJANGO_EMAIL_BACKEND", default="django.core.mail.backends.console.EmailBackend")
 EMAIL_HOST = env("EMAIL_HOST")
 EMAIL_PORT = 1025
-
-# WhiteNoise
-# ------------------------------------------------------------------------------
 INSTALLED_APPS = ["whitenoise.runserver_nostatic", *INSTALLED_APPS]
-
-# django-debug-toolbar
-# ------------------------------------------------------------------------------
 INSTALLED_APPS += ["debug_toolbar"]
 MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]
 DEBUG_TOOLBAR_CONFIG = {
-    "DISABLE_PANELS": [
-        "debug_toolbar.panels.redirects.RedirectsPanel",
-        "debug_toolbar.panels.profiling.ProfilingPanel",
-    ],
+    "DISABLE_PANELS": ["debug_toolbar.panels.redirects.RedirectsPanel", "debug_toolbar.panels.profiling.ProfilingPanel"],
     "SHOW_TEMPLATE_CONTEXT": True,
 }
 INTERNAL_IPS = ["127.0.0.1", "10.0.2.2"]
 if env("USE_DOCKER") == "yes":
     import socket
-
     hostname, _, ips = socket.gethostbyname_ex(socket.gethostname())
     INTERNAL_IPS += [".".join([*ip.split(".")[:-1], "1"]) for ip in ips]
-
-# django-extensions
-# ------------------------------------------------------------------------------
 INSTALLED_APPS += ["django_extensions"]
 
-# Billing
-# ------------------------------------------------------------------------------
 INSTALLED_APPS += []
 STRIPE_SECRET_KEY = env.str("STRIPE_SECRET_KEY", default="")
 STRIPE_PUBLISHABLE_KEY = env.str("STRIPE_PUBLISHABLE_KEY", default="")
 STRIPE_WEBHOOK_SECRET = env.str("STRIPE_WEBHOOK_SECRET", default="")
 
-# Django Control Room
-# ------------------------------------------------------------------------------
 DJ_CONTROL_ROOM_SETTINGS = {
     **DJ_CONTROL_ROOM_SETTINGS,
     "REGISTER_PANELS_IN_ADMIN": env.bool("CR_REGISTER_PANELS", default=True),
@@ -107,11 +70,8 @@ DJ_REDIS_PANEL_SETTINGS = {
         },
     },
 }
-# Celery
 CELERY_TASK_EAGER_PROPAGATES = True
 
-# AWS / Floci
-# ------------------------------------------------------------------------------
 AWS_ACCESS_KEY_ID = env.str("DJANGO_AWS_ACCESS_KEY_ID", default="test")
 AWS_SECRET_ACCESS_KEY = env.str("DJANGO_AWS_SECRET_ACCESS_KEY", default="test")
 AWS_SESSION_TOKEN = env.str("AWS_SESSION_TOKEN", default="")
@@ -123,15 +83,15 @@ AWS_QUERYSTRING_AUTH = False
 AWS_S3_MAX_MEMORY_SIZE = env.int("DJANGO_AWS_S3_MAX_MEMORY_SIZE", default=100_000_000)
 AWS_S3_CUSTOM_DOMAIN = env.str("DJANGO_AWS_S3_CUSTOM_DOMAIN", default="")
 AWS_S3_ADDRESSING_STYLE = "path"
-AWS_S3_OBJECT_PARAMETERS = {
-    "CacheControl": "max-age=604800, s-maxage=604800, must-revalidate",
-}
+AWS_S3_OBJECT_PARAMETERS = {"CacheControl": "max-age=604800, s-maxage=604800, must-revalidate"}
+AWS_S3_LOCATION = env.str("DJANGO_AWS_S3_LOCATION", default="media")
+AWS_AVATAR_LAMBDA_FUNCTION_NAME = env.str("AWS_AVATAR_LAMBDA_FUNCTION_NAME", default="django-template-avatar-processor")
 
 STORAGES = {
     "default": {
         "BACKEND": "storages.backends.s3.S3Storage",
         "OPTIONS": {
-            "location": "media",
+            "location": AWS_S3_LOCATION,
             "file_overwrite": False,
             "endpoint_url": AWS_ENDPOINT_URL,
             "bucket_name": AWS_STORAGE_BUCKET_NAME,
@@ -139,18 +99,10 @@ STORAGES = {
             "addressing_style": AWS_S3_ADDRESSING_STYLE,
         },
     },
-    "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
-    },
+    "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
 }
 
 CELERY_BEAT_SCHEDULE = {
-    "retry-unprocessed-stripe-webhooks": {
-        "task": "django_template.billing.tasks.retry_unprocessed_stripe_webhooks",
-        "schedule": 30.0,
-    },
-    "expire-one-time-purchases": {
-        "task": "django_template.billing.tasks.expire_one_time_purchases",
-        "schedule": 60.0,
-    },
+    "retry-unprocessed-stripe-webhooks": {"task": "django_template.billing.tasks.retry_unprocessed_stripe_webhooks", "schedule": 30.0},
+    "expire-one-time-purchases": {"task": "django_template.billing.tasks.expire_one_time_purchases", "schedule": 60.0},
 }
