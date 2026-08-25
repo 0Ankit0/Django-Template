@@ -19,6 +19,7 @@ from .providers import create_esewa_checkout
 from .providers import create_khalti_checkout
 from .providers import verify_esewa_response
 from .services import handle_webhook
+from .stripe_webhooks import STRIPE_WEBHOOK_EVENTS
 
 
 @pytest.mark.django_db
@@ -52,6 +53,16 @@ def test_provider_configuration_is_seedable_and_unique():
         Provider.KHALTI,
         Provider.ESEWA,
     }
+
+
+def test_stripe_webhook_event_scope_is_payment_and_billing_only():
+    assert "checkout.session.completed" in STRIPE_WEBHOOK_EVENTS
+    assert "payment_intent.succeeded" in STRIPE_WEBHOOK_EVENTS
+    assert "invoice.paid" in STRIPE_WEBHOOK_EVENTS
+    assert "customer.subscription.updated" in STRIPE_WEBHOOK_EVENTS
+    assert "refund.updated" in STRIPE_WEBHOOK_EVENTS
+    assert "balance.available" not in STRIPE_WEBHOOK_EVENTS
+    assert "issuing_authorization.request" not in STRIPE_WEBHOOK_EVENTS
 
 
 @pytest.mark.django_db
