@@ -50,13 +50,22 @@ AWS_S3_REGION_NAME = env("DJANGO_AWS_S3_REGION_NAME", default=None)
 AWS_REGION = AWS_S3_REGION_NAME or "us-east-1"
 AWS_ENDPOINT_URL = env("AWS_ENDPOINT_URL", default="")
 AWS_S3_CUSTOM_DOMAIN = env("DJANGO_AWS_S3_CUSTOM_DOMAIN", default=None)
+AWS_S3_LOCATION = env("DJANGO_AWS_S3_LOCATION", default="media")
+AWS_AVATAR_LAMBDA_FUNCTION_NAME = env("AWS_AVATAR_LAMBDA_FUNCTION_NAME", default="django-template-avatar-processor")
 aws_s3_domain = AWS_S3_CUSTOM_DOMAIN or f"{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com"
 
 STORAGES = {
-    "default": {"BACKEND": "storages.backends.s3.S3Storage", "OPTIONS": {"location": "media", "file_overwrite": False, "endpoint_url": AWS_ENDPOINT_URL or None}},
+    "default": {
+        "BACKEND": "storages.backends.s3.S3Storage",
+        "OPTIONS": {
+            "location": AWS_S3_LOCATION,
+            "file_overwrite": False,
+            "endpoint_url": AWS_ENDPOINT_URL or None,
+        },
+    },
     "staticfiles": {"BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage"},
 }
-MEDIA_URL = f"https://{aws_s3_domain}/media/"
+MEDIA_URL = f"https://{aws_s3_domain}/{AWS_S3_LOCATION}/"
 
 DEFAULT_FROM_EMAIL = env("DJANGO_DEFAULT_FROM_EMAIL", default="django-template <noreply@example.com>")
 SERVER_EMAIL = env("DJANGO_SERVER_EMAIL", default=DEFAULT_FROM_EMAIL)
