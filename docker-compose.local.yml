@@ -122,7 +122,7 @@ services:
       floci:
         condition: service_healthy
     volumes:
-      - ${PWD}/infra/aws/avatar_processor:/lambda_code:ro
+      - ${PWD}/infra/aws/avatar_processor:/lambda_code
     environment:
       AWS_ENDPOINT_URL: http://floci:4566
       AWS_DEFAULT_REGION: us-east-1
@@ -131,6 +131,7 @@ services:
       FLOCI_AVATAR_LAMBDA_PATH: /lambda_code
     command: >-
       sh -c "until aws --endpoint-url http://floci:4566 sts get-caller-identity >/dev/null 2>&1; do sleep 1; done;
+      python -m pip install --disable-pip-version-check --no-cache-dir -r /lambda_code/requirements.txt -t /lambda_code/vendor >/dev/null;
       aws --endpoint-url http://floci:4566 s3api head-bucket --bucket django-template-media >/dev/null 2>&1 ||
       aws --endpoint-url http://floci:4566 s3api create-bucket --bucket django-template-media;
       aws --endpoint-url http://floci:4566 lambda get-function --function-name django-template-avatar-processor >/dev/null 2>&1 ||
