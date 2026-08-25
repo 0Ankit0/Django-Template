@@ -129,13 +129,14 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
       FLOCI_AVATAR_LAMBDA_PATH: /lambda_code
+      FLOCI_AVATAR_LAMBDA_HOST_PATH: ${PWD}/infra/aws/avatar_processor
     command: >-
       sh -c "until aws --endpoint-url http://floci:4566 sts get-caller-identity >/dev/null 2>&1; do sleep 1; done;
       python -m pip install --disable-pip-version-check --no-cache-dir -r /lambda_code/requirements.txt -t /lambda_code/vendor >/dev/null;
       aws --endpoint-url http://floci:4566 s3api head-bucket --bucket django-template-media >/dev/null 2>&1 ||
       aws --endpoint-url http://floci:4566 s3api create-bucket --bucket django-template-media;
       aws --endpoint-url http://floci:4566 lambda get-function --function-name django-template-avatar-processor >/dev/null 2>&1 ||
-      aws --endpoint-url http://floci:4566 lambda create-function --function-name django-template-avatar-processor --runtime python3.12 --role arn:aws:iam::000000000000:role/lambda-role --handler lambda_function.lambda_handler --code S3Bucket=hot-reload,S3Key=/$${FLOCI_AVATAR_LAMBDA_PATH}; exit 0"
+      aws --endpoint-url http://floci:4566 lambda create-function --function-name django-template-avatar-processor --runtime python3.12 --role arn:aws:iam::000000000000:role/lambda-role --handler lambda_function.lambda_handler --code S3Bucket=hot-reload,S3Key=$${FLOCI_AVATAR_LAMBDA_HOST_PATH}; exit 0"
     restart: "no"
 
   celeryworker:
