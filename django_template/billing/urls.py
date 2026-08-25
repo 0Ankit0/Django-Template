@@ -12,6 +12,7 @@ urlpatterns = [
     path("cancel/", views.cancel, name="cancel"),
     path("success/", views.success, name="success"),
     path("cancelled/", views.cancelled, name="cancelled"),
+    path("invoices/<int:invoice_id>/download/", views.invoice_download, name="invoice-download"),
     path("callback/khalti/", views.khalti_callback, name="khalti-callback"),
     path("callback/esewa/", views.esewa_callback, name="esewa-callback"),
     path("webhooks/stripe/", views.webhook, name="stripe-webhook"),
