@@ -1,6 +1,9 @@
 import io
 import os
+import sys
 from urllib.parse import unquote_plus
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "vendor"))
 
 import boto3
 from PIL import Image, ImageOps
