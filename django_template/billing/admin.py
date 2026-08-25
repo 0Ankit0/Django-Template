@@ -2,13 +2,13 @@ from django.contrib import admin
 from unfold.admin import ModelAdmin
 from unfold.admin import TabularInline
 
-from .models import BillingCustomer, CheckoutSession, Entitlement, Feature, Invoice, Payment, Price, Product, ProductFeature, ProviderConfiguration, Subscription, WebhookEvent
+from .models import BillingCustomer, CheckoutSession, Feature, Invoice, Payment, Price, Product, ProductFeature, ProviderConfiguration, Subscription, WebhookEvent
 
 
 class PriceInline(TabularInline):
     model = Price
     extra = 0
-    fields = ["nickname", "amount", "currency", "billing_type", "interval", "interval_count", "active", "stripe_price_id"]
+    fields = ["nickname", "amount", "currency", "interval", "interval_count", "active", "stripe_price_id"]
     readonly_fields = ["stripe_price_id"]
 
 
@@ -29,8 +29,8 @@ class ProductAdmin(ModelAdmin):
 
 @admin.register(Price)
 class PriceAdmin(ModelAdmin):
-    list_display = ["product", "nickname", "amount", "currency", "billing_type", "interval", "active", "stripe_price_id"]
-    list_filter = ["active", "billing_type", "interval", "currency"]
+    list_display = ["product", "nickname", "amount", "currency", "interval", "interval_count", "active", "stripe_price_id"]
+    list_filter = ["active", "interval", "currency"]
     search_fields = ["product__name", "nickname", "stripe_price_id"]
     readonly_fields = ["stripe_price_id", "created_at"]
 
@@ -96,14 +96,6 @@ class CheckoutSessionAdmin(ModelAdmin):
     list_filter = ["provider", "mode", "status"]
     search_fields = ["tenant__name", "provider_session_id"]
     readonly_fields = ["provider_session_id", "created_at"]
-
-
-@admin.register(Entitlement)
-class EntitlementAdmin(ModelAdmin):
-    list_display = ["tenant", "price", "provider", "provider_reference", "starts_at", "expires_at", "active"]
-    list_filter = ["provider", "active", "price__product"]
-    search_fields = ["tenant__name", "provider_reference"]
-    readonly_fields = ["provider_reference", "created_at", "updated_at"]
 
 
 @admin.register(WebhookEvent)
