@@ -2,6 +2,11 @@ from django.db import migrations, models
 import django.db.models.deletion
 
 
+def migrate_existing_price_types(apps, schema_editor):
+    Price = apps.get_model("billing", "Price")
+    Price.objects.filter(interval="one_time").update(billing_type="one_time")
+
+
 class Migration(migrations.Migration):
     dependencies = [("billing", "0002_multi_provider")]
 
@@ -19,18 +24,12 @@ class Migration(migrations.Migration):
             model_name="price",
             name="interval",
             field=models.CharField(
-                choices=[
-                    ("one_time", "One time"),
-                    ("day", "Days"),
-                    ("week", "Weeks"),
-                    ("month", "Months"),
-                    ("year", "Years"),
-                ],
+                choices=[("one_time", "One time"), ("day", "Days"), ("week", "Weeks"), ("month", "Months"), ("year", "Years")],
                 default="month",
                 max_length=20,
             ),
         ),
-        migrations.AddField(model_name="entitlement", name="active", field=models.BooleanField(default=True)) if False else migrations.CreateModel(
+        migrations.CreateModel(
             name="Entitlement",
             fields=[
                 ("id", models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name="ID")),
@@ -50,13 +49,10 @@ class Migration(migrations.Migration):
                 "indexes": [models.Index(fields=["tenant", "active", "expires_at"], name="billing_ent_tenant_5b6b2a_idx")],
             },
         ),
-        migrations.AddField(
-            model_name="webhookevent",
-            name="processing",
-            field=models.BooleanField(default=False),
-        ),
+        migrations.AddField(model_name="webhookevent", name="processing", field=models.BooleanField(default=False)),
         migrations.AddConstraint(
             model_name="entitlement",
             constraint=models.UniqueConstraint(fields=("provider", "provider_reference"), name="billing_entitlement_provider_reference_unique"),
         ),
+        migrations.RunPython(migrate_existing_price_types, migrations.RunPython.noop),
     ]
