@@ -57,7 +57,7 @@ def expire_one_time_purchases() -> int:
     retry_backoff_max=300,
     retry_kwargs={"max_retries": 8},
 )
-def generate_local_invoice(self, payment_id: int, invoice_url: str) -> int:
+def generate_local_invoice(self, payment_id: int, billing_base_url: str) -> int:
     close_old_connections()
     from .models import Payment
 
@@ -103,7 +103,7 @@ def generate_local_invoice(self, payment_id: int, invoice_url: str) -> int:
         saved_name = default_storage.save(filename, ContentFile(pdf, name=filename))
         invoice.invoice_file.name = saved_name
 
-    invoice.invoice_pdf = invoice_url
+    invoice.invoice_pdf = f"{billing_base_url.rstrip('/')}/invoices/{invoice.pk}/download/"
     invoice.tenant = payment.tenant
     invoice.subscription = payment.subscription
     invoice.status = Invoice.Status.PAID
