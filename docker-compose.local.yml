@@ -102,7 +102,6 @@ services:
     environment:
       FLOCI_HOSTNAME: floci
       FLOCI_STORAGE_MODE: persistent
-      FLOCI_SERVICES_DOCKER_NETWORK: django-template_default
     volumes:
       - django_template_local_floci_data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
@@ -127,11 +126,9 @@ services:
       AWS_ACCESS_KEY_ID: test
       AWS_SECRET_ACCESS_KEY: test
     command: >-
-      sh -c "
-      until aws --endpoint-url http://floci:4566 sts get-caller-identity >/dev/null 2>&1; do sleep 1; done;
+      sh -c "until aws --endpoint-url http://floci:4566 sts get-caller-identity >/dev/null 2>&1; do sleep 1; done;
       aws --endpoint-url http://floci:4566 s3api head-bucket --bucket django-template-media >/dev/null 2>&1 ||
-      aws --endpoint-url http://floci:4566 s3api create-bucket --bucket django-template-media;
-      exit 0"
+      aws --endpoint-url http://floci:4566 s3api create-bucket --bucket django-template-media; exit 0"
     restart: "no"
 
   celeryworker:
