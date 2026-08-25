@@ -103,6 +103,8 @@ services:
     environment:
       FLOCI_HOSTNAME: floci
       FLOCI_STORAGE_MODE: persistent
+      FLOCI_SERVICES_LAMBDA_HOT_RELOAD_ENABLED: "true"
+      FLOCI_SERVICES_LAMBDA_HOT_RELOAD_ALLOWED_PATHS: "${PWD}/infra/aws/avatar_processor"
     volumes:
       - django_template_local_floci_data:/app/data
       - /var/run/docker.sock:/var/run/docker.sock
