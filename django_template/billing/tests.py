@@ -9,6 +9,7 @@ import stripe
 from django.contrib import admin
 from django.test import override_settings
 
+from .invoice import build_invoice_pdf
 from .models import Feature
 from .models import Price
 from .models import Product
@@ -63,6 +64,23 @@ def test_stripe_webhook_event_scope_is_payment_and_billing_only():
     assert "refund.updated" in STRIPE_WEBHOOK_EVENTS
     assert "balance.available" not in STRIPE_WEBHOOK_EVENTS
     assert "issuing_authorization.request" not in STRIPE_WEBHOOK_EVENTS
+
+
+def test_local_invoice_pdf_is_valid_pdf_bytes():
+    pdf = build_invoice_pdf(
+        invoice_number="INV-KHALTI-00000001",
+        tenant_name="Acme",
+        provider=Provider.KHALTI,
+        product_name="Pro",
+        amount="100.00",
+        currency="npr",
+        payment_reference="txn-123",
+        issued_at=__import__("datetime").datetime(2026, 8, 25, tzinfo=__import__("datetime").timezone.utc),
+    )
+
+    assert pdf.startswith(b"%PDF-1.4")
+    assert b"INV-KHALTI-00000001" in pdf
+    assert pdf.endswith(b"%%EOF\n")
 
 
 @pytest.mark.django_db
