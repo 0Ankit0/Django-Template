@@ -40,7 +40,7 @@ EMAIL_PORT = 1025
 
 # WhiteNoise
 # ------------------------------------------------------------------------------
-# http://whitenoise.evans.io/en/latest/django.html#using-whitenoise-runserver
+# http://whitenoise.evans.io/en/latest/django.html#using-whitenoise-in-development
 INSTALLED_APPS = ["whitenoise.runserver_nostatic", *INSTALLED_APPS]
 
 # django-debug-toolbar
@@ -136,6 +136,7 @@ AWS_S3_REGION_NAME = AWS_REGION
 AWS_QUERYSTRING_AUTH = False
 AWS_S3_MAX_MEMORY_SIZE = env.int("DJANGO_AWS_S3_MAX_MEMORY_SIZE", default=100_000_000)
 AWS_S3_CUSTOM_DOMAIN = env.str("DJANGO_AWS_S3_CUSTOM_DOMAIN", default="")
+AWS_S3_ADDRESSING_STYLE = "path"
 AWS_S3_OBJECT_PARAMETERS = {
     "CacheControl": "max-age=604800, s-maxage=604800, must-revalidate",
 }
@@ -150,6 +151,7 @@ STORAGES = {
             "endpoint_url": AWS_ENDPOINT_URL,
             "bucket_name": AWS_STORAGE_BUCKET_NAME,
             "region_name": AWS_REGION,
+            "addressing_style": AWS_S3_ADDRESSING_STYLE,
         },
     },
     "staticfiles": {
