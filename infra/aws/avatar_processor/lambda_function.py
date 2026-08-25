@@ -19,12 +19,20 @@ def _optimized_key(key: str) -> str:
 
 
 def _thumbnail_key(key: str) -> str:
-    return f"{_optimized_key(key).rsplit('.', 1)[0]}.webp"
+    optimized = _optimized_key(key)
+    name = optimized.rsplit("/", 1)[-1].rsplit(".", 1)[0]
+    return f"media/avatars/thumbnail/{name}.webp"
 
 
 def _save_image(image: Image.Image, format_name: str, quality: int) -> bytes:
     output = io.BytesIO()
-    image.save(output, format=format_name, quality=quality, optimize=True, progressive=format_name == "JPEG")
+    image.save(
+        output,
+        format=format_name,
+        quality=quality,
+        optimize=True,
+        progressive=format_name == "JPEG",
+    )
     return output.getvalue()
 
 
