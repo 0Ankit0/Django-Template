@@ -2,8 +2,6 @@ from django.db.models import CharField
 from django.urls import reverse
 from django.utils.translation import gettext_lazy as _
 from tenant_users.tenants.models import UserProfile
-from imagekit.models import ImageSpecField
-from imagekit.processors import ResizeToFill, Transpose
 from django.db import models
 
 
@@ -20,17 +18,11 @@ class User(UserProfile):
         blank=True,
         null=True,
     )
-
-    avatar_thumbnail = ImageSpecField(
-        source="avatar",
-        processors=[
-            Transpose(),
-            ResizeToFill(200, 200),
-        ],
-        format="WEBP",
-        options={
-            "quality": 80,
-        },
+    avatar_thumbnail = models.ImageField(
+        upload_to="avatars/thumbnail/",
+        blank=True,
+        null=True,
+        editable=False,
     )
     bio = models.TextField(
         blank=True,
