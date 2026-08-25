@@ -61,10 +61,10 @@ jobs:
         run: docker compose -f docker-compose.local.yml run --rm django python manage.py makemigrations --check
       - name: Run DB Migrations
         run: docker compose -f docker-compose.local.yml run --rm django python manage.py migrate
-      - name: Verify local AWS via Floci and boto3
+      - name: Verify local AWS via Floci and boto3 helper
         run: >-
           docker compose -f docker-compose.local.yml run --rm django
-          python -c "from django.conf import settings; import boto3; s=boto3.client('s3', endpoint_url=settings.AWS_ENDPOINT_URL, region_name=settings.AWS_REGION); print(s.list_buckets()['Buckets'])"
+          python -c "from django_template.aws import aws_client; print(aws_client('s3').list_buckets()['Buckets'])"
       - name: Run Django Tests
         run: docker compose -f docker-compose.local.yml run django pytest
       - name: Tear down the Stack
