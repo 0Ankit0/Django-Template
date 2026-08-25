@@ -48,7 +48,7 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
         raise ValueError("This price has not been synchronized to Stripe yet.")
     tenant = request.tenant
     customer = create_or_get_customer(tenant, email=getattr(request.user, "email", ""), name=getattr(request.user, "name", "") or str(request.user))
-    mode = "subscription" if price.is_recurring else "payment"
+    mode = "payment" if price.is_one_time else "subscription"
     success_url = request.build_absolute_uri("/billing/success/") + "?session_id={CHECKOUT_SESSION_ID}"
     cancel_url = request.build_absolute_uri("/billing/pricing/")
     metadata = {"tenant_id": str(tenant.pk), "price_id": str(price.pk)}
@@ -61,10 +61,11 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
         "client_reference_id": str(tenant.pk),
         "metadata": metadata,
     }
-    if price.is_recurring:
-        payload["subscription_data"] = {"metadata": metadata}
-    else:
+    if price.is_one_time:
         payload["payment_intent_data"] = {"metadata": metadata}
+        payload["invoice_creation"] = {"enabled": True, "invoice_data": {"metadata": metadata}}
+    else:
+        payload["subscription_data"] = {"metadata": metadata}
 
     stripe_session = _stripe_client().v1.checkout.sessions.create(payload)
     data = _stripe_dict(stripe_session)
