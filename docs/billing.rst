@@ -66,9 +66,25 @@ catalog with::
 
     uv run python manage.py sync_billing_catalog
 
+Configure the Stripe account webhook endpoint with::
+
+    uv run python manage.py configure_stripe_webhook \
+      --url https://example.com/billing/webhooks/stripe/
+
+The command is idempotent by endpoint URL and enables only the Stripe events
+used by this application: Checkout Session completion/expiration/async payment
+outcomes, PaymentIntent lifecycle events, customer subscription lifecycle and
+pending-update events, invoice lifecycle/payment events, and refund/charge
+refund events. It creates an account endpoint (``connect=False``); this project
+does not use Stripe Connect.
+
+The endpoint's returned signing secret belongs in ``STRIPE_WEBHOOK_SECRET``.
+The server stores each incoming Stripe event in ``WebhookEvent`` using the
+Stripe event ID as the idempotency key before queueing background processing.
+
 For local development, run the billing tests with::
 
-    uv run pytest django_template/billing/tests/test_services.py
+    uv run pytest django_template/billing/tests.py django_template/billing/tests/test_services.py
 
 Or run the complete project test suite with::
 
@@ -88,6 +104,15 @@ transaction status is checked server-to-server before recording success. Both
 callback results are stored in ``WebhookEvent`` using provider-specific event
 IDs, so replayed callbacks do not create duplicate payment or subscription
 records.
+
+Success and cancellation pages
+------------------------------
+
+Stripe Checkout returns to ``/billing/success/`` or ``/billing/cancelled/``.
+Khalti and eSewa verified callbacks redirect to the same success page family,
+while failed/canceled provider flows redirect to the cancellation page. These
+pages are built from the project's Cotton components and explicitly explain
+that access is granted only after verified provider processing.
 
 Security
 --------
