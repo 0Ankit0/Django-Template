@@ -1,5 +1,6 @@
 from typing import Any
 
+from django.db import IntegrityError
 from django.db import transaction
 
 from .models import BillingCustomer
@@ -26,26 +27,26 @@ def create_or_get_customer(tenant, email: str = "", name: str = "") -> BillingCu
         return customer
 
     stripe_customer = _stripe_client().v1.customers.create(
-        {"email": email or None, "name": name or None, "metadata": {"tenant_id": str(tenant.pk)}}
+        {"email": email or None, "name": name or None, "metadata": {"tenant_id": str(tenant.pk)}},
+        options={"idempotency_key": f"billing-customer-{tenant.pk}"},
     )
-    return BillingCustomer.objects.create(
-        tenant=tenant,
-        provider=Provider.STRIPE,
-        provider_customer_id=str(stripe_customer.id),
-        email=email,
-        name=name,
-    )
+    try:
+        return BillingCustomer.objects.create(
+            tenant=tenant,
+            provider=Provider.STRIPE,
+            provider_customer_id=str(stripe_customer.id),
+            email=email,
+            name=name,
+        )
+    except IntegrityError:
+        return BillingCustomer.objects.get(tenant=tenant, provider=Provider.STRIPE)
 
 
 def create_checkout_session(request, price: Price) -> CheckoutSession:
     if not price.stripe_price_id:
         raise ValueError("This price has not been synchronized to Stripe yet.")
     tenant = request.tenant
-    customer = create_or_get_customer(
-        tenant,
-        email=getattr(request.user, "email", ""),
-        name=getattr(request.user, "name", "") or str(request.user),
-    )
+    customer = create_or_get_customer(tenant, email=getattr(request.user, "email", ""), name=getattr(request.user, "name", "") or str(request.user))
     mode = "subscription" if price.is_recurring else "payment"
     success_url = request.build_absolute_uri("/billing/success/") + "?session_id={CHECKOUT_SESSION_ID}"
     cancel_url = request.build_absolute_uri("/billing/pricing/")
