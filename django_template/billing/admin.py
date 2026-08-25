@@ -2,13 +2,13 @@ from django.contrib import admin
 from unfold.admin import ModelAdmin
 from unfold.admin import TabularInline
 
-from .models import BillingCustomer, CheckoutSession, Feature, Invoice, Payment, Price, Product, ProductFeature, ProviderConfiguration, Subscription, WebhookEvent
+from .models import BillingCustomer, CheckoutSession, Entitlement, Feature, Invoice, Payment, Price, Product, ProductFeature, ProviderConfiguration, Subscription, WebhookEvent
 
 
 class PriceInline(TabularInline):
     model = Price
     extra = 0
-    fields = ["nickname", "amount", "currency", "interval", "interval_count", "active", "stripe_price_id"]
+    fields = ["nickname", "amount", "currency", "billing_type", "interval", "interval_count", "active", "stripe_price_id"]
     readonly_fields = ["stripe_price_id"]
 
 
@@ -29,8 +29,8 @@ class ProductAdmin(ModelAdmin):
 
 @admin.register(Price)
 class PriceAdmin(ModelAdmin):
-    list_display = ["product", "nickname", "amount", "currency", "interval", "active", "stripe_price_id"]
-    list_filter = ["active", "interval", "currency"]
+    list_display = ["product", "nickname", "amount", "currency", "billing_type", "interval", "active", "stripe_price_id"]
+    list_filter = ["active", "billing_type", "interval", "currency"]
     search_fields = ["product__name", "nickname", "stripe_price_id"]
     readonly_fields = ["stripe_price_id", "created_at"]
 
@@ -55,10 +55,7 @@ class ProviderConfigurationAdmin(ModelAdmin):
     list_filter = ["provider", "environment", "enabled"]
     search_fields = ["provider", "notes"]
     readonly_fields = ["updated_at"]
-    fieldsets = (
-        (None, {"fields": ("provider", "enabled", "environment", "notes", "updated_at")}),
-        ("Credentials", {"description": "Provider secrets are intentionally configured through environment variables. Never paste secret API keys into Django Admin. See the Billing documentation for sandbox test credentials and setup."}),
-    )
+    fieldsets = ((None, {"fields": ("provider", "enabled", "environment", "notes", "updated_at")}), ("Credentials", {"description": "Provider secrets are configured through environment variables. Never paste secret API keys into Django Admin."}))
 
 
 @admin.register(BillingCustomer)
@@ -101,9 +98,17 @@ class CheckoutSessionAdmin(ModelAdmin):
     readonly_fields = ["provider_session_id", "created_at"]
 
 
+@admin.register(Entitlement)
+class EntitlementAdmin(ModelAdmin):
+    list_display = ["tenant", "price", "provider", "provider_reference", "starts_at", "expires_at", "active"]
+    list_filter = ["provider", "active", "price__product"]
+    search_fields = ["tenant__name", "provider_reference"]
+    readonly_fields = ["provider_reference", "created_at", "updated_at"]
+
+
 @admin.register(WebhookEvent)
 class WebhookEventAdmin(ModelAdmin):
-    list_display = ["provider", "event_type", "event_id", "processed", "created_at", "processed_at"]
-    list_filter = ["provider", "processed", "event_type"]
+    list_display = ["provider", "event_type", "event_id", "processed", "processing", "created_at", "processed_at"]
+    list_filter = ["provider", "processed", "processing", "event_type"]
     search_fields = ["event_id", "event_type"]
-    readonly_fields = ["provider", "event_id", "event_type", "payload", "processed", "processed_at", "error", "created_at"]
+    readonly_fields = ["provider", "event_id", "event_type", "payload", "processed", "processing", "processed_at", "error", "created_at"]
