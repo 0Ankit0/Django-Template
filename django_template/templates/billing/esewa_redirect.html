@@ -1,12 +1,26 @@
 {% extends "base.html" %}
+
+{% block title %}Continue to eSewa · django-template{% endblock title %}
+
 {% block content %}
-<div class="mx-auto max-w-xl py-16 text-center">
-  <h1 class="text-2xl font-semibold">Redirecting to eSewa…</h1>
-  <p class="mt-2 text-muted-foreground">Please wait while we send you to the eSewa payment page.</p>
-  <form id="esewa-payment" method="post" action="{{ action }}">
-    {% for name, value in fields.items %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
-    <noscript><button type="submit">Continue to eSewa</button></noscript>
-  </form>
+<div class="mx-auto max-w-xl py-10 sm:py-16">
+  <c-card>
+    <c-card.header>
+      <c-card.title>Continue to eSewa</c-card.title>
+      <c-card.description>Your signed payment form is ready. eSewa will verify the payment before Django records it.</c-card.description>
+    </c-card.header>
+    <c-card.content class="space-y-5">
+      <c-alert variant="warning">
+        <c-alert.title>Do not close this page during redirect.</c-alert.title>
+        <c-alert.description>The payment result is verified server-to-server after eSewa returns.</c-alert.description>
+      </c-alert>
+      <form id="esewa-payment" method="post" action="{{ action }}" class="space-y-4">
+        {% for name, value in fields.items %}<input type="hidden" name="{{ name }}" value="{{ value }}">{% endfor %}
+        <c-button type="submit" class="w-full">Continue to eSewa</c-button>
+      </form>
+      <a href="{% url 'billing:cancelled' %}?provider=esewa" class="block text-center text-sm text-muted-foreground hover:text-foreground">Cancel and return to plans</a>
+    </c-card.content>
+  </c-card>
 </div>
 <script>document.getElementById("esewa-payment").submit();</script>
 {% endblock content %}

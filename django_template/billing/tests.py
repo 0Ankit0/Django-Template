@@ -9,6 +9,7 @@ import stripe
 from django.contrib import admin
 from django.test import override_settings
 
+from .invoice import build_invoice_pdf
 from .models import Feature
 from .models import Price
 from .models import Product
@@ -19,6 +20,7 @@ from .providers import create_esewa_checkout
 from .providers import create_khalti_checkout
 from .providers import verify_esewa_response
 from .services import handle_webhook
+from .stripe_webhooks import STRIPE_WEBHOOK_EVENTS
 
 
 @pytest.mark.django_db
@@ -52,6 +54,33 @@ def test_provider_configuration_is_seedable_and_unique():
         Provider.KHALTI,
         Provider.ESEWA,
     }
+
+
+def test_stripe_webhook_event_scope_is_payment_and_billing_only():
+    assert "checkout.session.completed" in STRIPE_WEBHOOK_EVENTS
+    assert "payment_intent.succeeded" in STRIPE_WEBHOOK_EVENTS
+    assert "invoice.paid" in STRIPE_WEBHOOK_EVENTS
+    assert "customer.subscription.updated" in STRIPE_WEBHOOK_EVENTS
+    assert "refund.updated" in STRIPE_WEBHOOK_EVENTS
+    assert "balance.available" not in STRIPE_WEBHOOK_EVENTS
+    assert "issuing_authorization.request" not in STRIPE_WEBHOOK_EVENTS
+
+
+def test_local_invoice_pdf_is_valid_pdf_bytes():
+    pdf = build_invoice_pdf(
+        invoice_number="INV-KHALTI-00000001",
+        tenant_name="Acme",
+        provider=Provider.KHALTI,
+        product_name="Pro",
+        amount="100.00",
+        currency="npr",
+        payment_reference="txn-123",
+        issued_at=__import__("datetime").datetime(2026, 8, 25, tzinfo=__import__("datetime").timezone.utc),
+    )
+
+    assert pdf.startswith(b"%PDF-1.4")
+    assert b"INV-KHALTI-00000001" in pdf
+    assert pdf.endswith(b"%%EOF\n")
 
 
 @pytest.mark.django_db

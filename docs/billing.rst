@@ -1,27 +1,44 @@
 Billing providers
 =================
 
-The billing app is tenant-first and supports Stripe, Khalti, and eSewa. The
-pricing page lets a customer choose the provider for each eligible price.
+The billing app is tenant-first and supports Stripe, Khalti, and eSewa. Prices use
+the existing ``Price.interval`` and ``Price.interval_count`` fields as the
+canonical billing duration. There is no separate billing-mode column.
 
 Provider capabilities
 ---------------------
 
-* Stripe: one-time payments and recurring subscriptions.
+* Stripe: recurring subscriptions and one-time purchases.
 * Khalti: one-time NPR payments through Khalti ePayment v2.
 * eSewa: one-time NPR payments through ePay v2.
 
-Khalti and eSewa are intentionally not presented for recurring prices. They
-are modeled as wallet payments in this template; Stripe remains the automatic
-recurring-subscription provider.
+One-time purchase semantics
+----------------------------
+
+A one-time price is represented using the existing ``Price.metadata`` field
+(``{"one_time": true}``) plus its normal duration interval. For one-time prices,
+``interval_count`` is always ``1``. The interval itself is the lifetime: for
+example, a monthly one-time price remains active for one month and a weekly
+one-time price remains active for one week.
+
+After successful payment, all providers create a local ``Subscription`` record
+for the purchase. It has ``current_period_start``, ``current_period_end`` and
+``cancel_at_period_end=True``. A one-time purchase is therefore represented by
+the same subscription model as a recurring purchase, but it can never renew.
+A periodic Celery task marks it canceled once ``current_period_end`` is reached.
+
+Stripe one-time Checkout sessions use Stripe payment mode and enable Stripe
+invoice creation, so the successful payment still produces a Stripe invoice.
+The resulting payment, invoice and local subscription are populated from
+Stripe webhook events rather than from the browser success redirect.
 
 Provider selection
 ------------------
 
-The customer submits a provider choice with checkout. The server validates
-both the provider and the price before creating a payment. A provider must be
-enabled in ``Admin -> Billing -> Provider configurations`` and must support the
-selected price. Recurring prices are restricted to Stripe.
+The checkout endpoint receives the selected provider as ``provider``. The
+server validates that the provider is enabled and compatible with the price.
+Khalti and eSewa are exposed only for prices marked one-time because those
+providers are configured as one-time wallets in this template.
 
 Environment
 -----------
@@ -44,50 +61,58 @@ or Live/Production.
 Checkout
 --------
 
-Create products, prices, and features in Django Admin. Recurring Stripe prices
-must be synchronized with::
+Create products, prices, and features in Django Admin. Synchronize the billing
+catalog with::
 
     uv run python manage.py sync_billing_catalog
 
-The checkout endpoint receives the selected provider as ``provider``. The
-server validates that the provider is enabled and compatible with the price
-before starting checkout.
+Configure the Stripe account webhook endpoint with::
+
+    uv run python manage.py configure_stripe_webhook \
+      --url https://example.com/billing/webhooks/stripe/
+
+The command is idempotent by endpoint URL and enables only the Stripe events
+used by this application: Checkout Session completion/expiration/async payment
+outcomes, PaymentIntent lifecycle events, customer subscription lifecycle and
+pending-update events, invoice lifecycle/payment events, and refund/charge
+refund events. It creates an account endpoint (``connect=False``); this project
+does not use Stripe Connect.
+
+The endpoint's returned signing secret belongs in ``STRIPE_WEBHOOK_SECRET``.
+The server stores each incoming Stripe event in ``WebhookEvent`` using the
+Stripe event ID as the idempotency key before queueing background processing.
 
 For local development, run the billing tests with::
 
-    uv run pytest django_template/billing/tests.py
+    uv run pytest django_template/billing/tests.py django_template/billing/tests/test_services.py
 
 Or run the complete project test suite with::
 
     uv run pytest
 
-The billing test suite covers:
-
-* smallest-currency-unit price handling
-* product/feature relationships and uniqueness
-* provider configuration records
-* Stripe webhook signature verification and replay tolerance
-* eSewa response signature verification and tamper rejection
-* Khalti checkout creation and recurring-price rejection
-* eSewa signed checkout form generation
-* Billing model registration in Django Admin
-
-Sandbox test credentials
-------------------------
-
-See ``billing-test-credentials.rst`` for the documented Stripe, Khalti, and
-eSewa sandbox/UAT test credentials. Those credentials are for development only
-and must never be used in production configuration.
-
 Webhooks and callbacks
 ----------------------
 
 Stripe webhooks are received at ``/billing/webhooks/stripe/`` and require a
-valid ``Stripe-Signature`` header. Khalti returns to
-``/billing/callback/khalti/`` and the server performs a server-to-server lookup
-before recording a successful payment. eSewa returns an encoded response to
-``/billing/callback/esewa/``; the signature is verified and the transaction
-status is checked server-to-server before recording success.
+valid ``Stripe-Signature`` header. Webhook rows are unique per provider/event
+ID and are processed asynchronously through Celery with retry support.
+
+Khalti returns to ``/billing/callback/khalti/`` and the server performs a
+server-to-server lookup before recording success. eSewa returns an encoded
+response to ``/billing/callback/esewa/``; the signature is verified and the
+transaction status is checked server-to-server before recording success. Both
+callback results are stored in ``WebhookEvent`` using provider-specific event
+IDs, so replayed callbacks do not create duplicate payment or subscription
+records.
+
+Success and cancellation pages
+------------------------------
+
+Stripe Checkout returns to ``/billing/success/`` or ``/billing/cancelled/``.
+Khalti and eSewa verified callbacks redirect to the same success page family,
+while failed/canceled provider flows redirect to the cancellation page. These
+pages are built from the project's Cotton components and explicitly explain
+that access is granted only after verified provider processing.
 
 Security
 --------
