@@ -1,5 +1,6 @@
 from typing import Any
 
+from django.db import IntegrityError
 from django.db import transaction
 
 from .models import BillingCustomer
@@ -26,19 +27,20 @@ def create_or_get_customer(tenant, email: str = "", name: str = "") -> BillingCu
         return customer
 
     stripe_customer = _stripe_client().v1.customers.create(
-        {
-            "email": email or None,
-            "name": name or None,
-            "metadata": {"tenant_id": str(tenant.pk)},
-        },
+        {"email": email or None, "name": name or None, "metadata": {"tenant_id": str(tenant.pk)}},
+        options={"idempotency_key": f"billing-customer-{tenant.pk}"},
     )
-    return BillingCustomer.objects.create(
-        tenant=tenant,
-        provider=Provider.STRIPE,
-        provider_customer_id=str(stripe_customer.id),
-        email=email,
-        name=name,
-    )
+    try:
+        with transaction.atomic():
+            return BillingCustomer.objects.create(
+                tenant=tenant,
+                provider=Provider.STRIPE,
+                provider_customer_id=str(stripe_customer.id),
+                email=email,
+                name=name,
+            )
+    except IntegrityError:
+        return BillingCustomer.objects.get(tenant=tenant, provider=Provider.STRIPE)
 
 
 def create_checkout_session(request, price: Price) -> CheckoutSession:
@@ -50,9 +52,10 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
         email=getattr(request.user, "email", ""),
         name=getattr(request.user, "name", "") or str(request.user),
     )
-    mode = "subscription" if price.is_recurring else "payment"
-    success_url = request.build_absolute_uri("/billing/success/") + "?session_id={CHECKOUT_SESSION_ID}"
-    cancel_url = request.build_absolute_uri("/billing/pricing/")
+    mode = "payment" if price.is_one_time else "subscription"
+    success_url = request.build_absolute_uri("/billing/success/") + "?provider=stripe&session_id={CHECKOUT_SESSION_ID}"
+    cancel_url = request.build_absolute_uri(f"/billing/cancelled/?provider=stripe&price_id={price.pk}")
+    metadata = {"tenant_id": str(tenant.pk), "price_id": str(price.pk)}
     payload: dict[str, Any] = {
         "mode": mode,
         "customer": customer.provider_customer_id,
@@ -60,12 +63,13 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
         "success_url": success_url,
         "cancel_url": cancel_url,
         "client_reference_id": str(tenant.pk),
-        "metadata": {"tenant_id": str(tenant.pk), "price_id": str(price.pk)},
+        "metadata": metadata,
     }
-    if price.is_recurring:
-        payload["subscription_data"] = {
-            "metadata": {"tenant_id": str(tenant.pk), "price_id": str(price.pk)},
-        }
+    if price.is_one_time:
+        payload["payment_intent_data"] = {"metadata": metadata}
+        payload["invoice_creation"] = {"enabled": True, "invoice_data": {"metadata": metadata}}
+    else:
+        payload["subscription_data"] = {"metadata": metadata}
 
     stripe_session = _stripe_client().v1.checkout.sessions.create(payload)
     data = _stripe_dict(stripe_session)
@@ -77,5 +81,5 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
         mode=mode,
         status=data.get("status", "open"),
         url=data.get("url", ""),
-        metadata=data.get("metadata") or {},
+        metadata=data.get("metadata") or metadata,
     )
