@@ -56,8 +56,18 @@ class ProviderConfigurationAdmin(ModelAdmin):
     search_fields = ["provider", "notes"]
     readonly_fields = ["updated_at"]
     fieldsets = (
-        (None, {"fields": ("provider", "enabled", "environment", "notes", "updated_at")}),
-        ("Credentials", {"description": "Provider secrets are intentionally configured through environment variables. Never paste secret API keys into Django Admin. See the Billing documentation for sandbox test credentials and setup."}),
+    (
+        None,
+        {
+            "fields": (
+                "provider",
+                "enabled",
+                "environment",
+                "notes",
+                "updated_at",
+                )
+            },
+        ),
     )
 
 

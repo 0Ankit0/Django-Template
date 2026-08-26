@@ -48,7 +48,7 @@ def _dt(value: Any) -> datetime | None:
 
 
 def create_stripe_customer(*, tenant, email: str = "", name: str = "") -> dict[str, Any]:
-    customer = _stripe_client().v1.customers.create({"email": email or None, "name": name or None, "metadata": {"tenant_id": str(tenant.pk)}})
+    customer = _stripe_client().v1.customers.create({"email": email, "name": name, "metadata": {"tenant_id": str(tenant.pk)}})
     return _stripe_dict(customer)
 
 
@@ -164,7 +164,7 @@ def handle_webhook(payload: bytes, signature: str) -> WebhookEvent:
         raise ValueError("Stripe webhook secret/signature is not configured.")
     try:
         event = stripe.Webhook.construct_event(payload, signature, settings.STRIPE_WEBHOOK_SECRET)
-    except (ValueError, stripe.error.SignatureVerificationError) as exc:
+    except (ValueError, stripe.SignatureVerificationError) as exc:
         raise ValueError("Invalid Stripe webhook signature or payload.") from exc
     event_data = _stripe_dict(event)
     with transaction.atomic():

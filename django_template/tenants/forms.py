@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 from django import forms
 from django.contrib.auth import get_user_model
 from django.db import transaction
@@ -48,33 +51,47 @@ class OrganizationCreateForm(forms.ModelForm):
         return tenant
 
 
+class InvitationAdminForm(forms.ModelForm):
+    class Meta:
+        model = Invitation
+        fields = ["tenant", "email", "message"]
+
+    def clean(self):
+        cleaned = super().clean()
+        tenant = cleaned.get("tenant")
+        email = cleaned.get("email")
+        if tenant and email and tenant.user_set.filter(email=email).exists():
+            self.add_error("email", _("This user is already a member of the tenant."))
+        return cleaned
+
+
+
 class InvitationForm(forms.ModelForm):
     class Meta:
         model = Invitation
-        fields = ["user", "message", "expires_at"]
+        fields = ["email", "message", "expires_at"]
         widgets = {
-            "expires_at": forms.DateTimeInput(attrs={"type": "datetime-local"}),
-            "message": forms.Textarea(attrs={"rows": 4}),
+            "message": forms.Textarea(attrs={"rows": 4})
         }
 
     def __init__(self, *args, tenant=None, invited_by=None, **kwargs):
         super().__init__(*args, **kwargs)
         self.tenant = tenant
         self.invited_by = invited_by
-        self.fields["user"].queryset = User.objects.filter(is_active=True).exclude(tenants=tenant)
+        self.fields["email"].queryset = User.objects.filter(is_active=True).exclude(tenants=tenant)
 
-    def clean_user(self):
-        user = self.cleaned_data["user"]
-        if self.tenant.user_set.filter(pk=user.pk).exists():
+    def clean_email(self):
+        email = self.cleaned_data["email"]
+        if self.tenant.user_set.filter(email=email).exists():
             raise forms.ValidationError(_("This user is already a member of the organization."))
-        return user
+        return email
 
     def save(self, commit=True):
         if not commit:
             return super().save(commit=False)
         return create_invitation(
             tenant=self.tenant,
-            user=self.cleaned_data["user"],
+            email=self.cleaned_data["email"],
             invited_by=self.invited_by,
             message=self.cleaned_data.get("message", ""),
             expires_at=self.cleaned_data.get("expires_at"),

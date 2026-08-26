@@ -1,3 +1,6 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 from datetime import timedelta
 from uuid import uuid4
 
@@ -10,7 +13,9 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_tenants.models import DomainMixin
 from tenant_users.tenants.models import ExistsError
-from tenant_users.tenants.models import TenantBase
+
+if TYPE_CHECKING:
+    from tenant_users.tenants.models import TenantBase
 
 
 def default_invitation_expiry():
@@ -49,14 +54,13 @@ class Invitation(models.Model):
         CANCELED = "canceled", _("Canceled")
 
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE, related_name="invitations")
-    user = models.ForeignKey(
-        settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
-        related_name="tenant_invitations",
-    )
+    email = models.EmailField(_("Email address"))
+
     invited_by = models.ForeignKey(
         settings.AUTH_USER_MODEL,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=False,
         related_name="sent_tenant_invitations",
     )
     token = models.UUIDField(default=uuid4, unique=True, editable=False)
@@ -75,19 +79,19 @@ class Invitation(models.Model):
         ordering = ["-created_at"]
         constraints = [
             models.UniqueConstraint(
-                fields=["tenant", "user"],
+                fields=["tenant", "email"],
                 condition=Q(status="pending"),
                 name="unique_pending_tenant_invitation",
             ),
         ]
         indexes = [
             models.Index(fields=["tenant", "status"], name="tenants_inv_tenant__idx"),
-            models.Index(fields=["user", "status"], name="tenants_inv_user_id_idx"),
+            models.Index(fields=["email", "status"], name="tenants_inv_email_idx"),
             models.Index(fields=["expires_at"], name="tenants_inv_expires_idx"),
         ]
 
     def __str__(self) -> str:
-        return f"{self.user.email} → {self.tenant.name} ({self.get_status_display()})"
+        return f"{self.email} → {self.tenant.name} ({self.get_status_display()})"
 
     @property
     def is_expired(self) -> bool:
@@ -95,44 +99,94 @@ class Invitation(models.Model):
 
     def clean(self) -> None:
         super().clean()
+
         if (
             self.invited_by_id
             and not self.invited_by.is_superuser
             and self.tenant.owner_id != self.invited_by_id
         ):
             raise ValidationError(
-                {"invited_by": _("Only the tenant owner or a superuser can create invitations.")},
+                {
+                    "invited_by": _(
+                        "Only the tenant owner or a superuser can create invitations."
+                    )
+                }
             )
-        if self.user_id and not self.user.is_active:
-            raise ValidationError({"user": _("Inactive users cannot be invited.")})
-        if (
-            self.user_id
-            and self.tenant_id
-            and self.tenant.user_set.filter(pk=self.user_id).exists()
-        ):
-            raise ValidationError({"user": _("This user is already a member of the tenant.")})
+
+        if self.email:
+            self.email = self.email.strip().lower()
+
+        if self.tenant_id and self.email:
+            # Don't allow inviting an email that already belongs to
+            # a member of this tenant.
+            if self.tenant.user_set.filter(
+                email__iexact=self.email,
+            ).exists():
+                raise ValidationError(
+                    {
+                        "email": _(
+                            "This email address already belongs to a member "
+                            "of this organization."
+                        )
+                    }
+                )
 
     @transaction.atomic
-    def accept(self) -> None:
-        invitation = Invitation.objects.select_for_update().select_related("tenant", "user").get(pk=self.pk)
+    def accept(self, user=None) -> None:
+        invitation = (
+            Invitation.objects
+            .select_for_update()
+            .select_related("tenant")
+            .get(pk=self.pk)
+        )
+
         if invitation.status == self.Status.ACCEPTED:
             return
+
         if invitation.status != self.Status.PENDING:
-            raise ValidationError(_("This invitation is no longer available."))
+            raise ValidationError(
+                _("This invitation is no longer available.")
+            )
+
         if invitation.is_expired:
             invitation.status = self.Status.EXPIRED
             invitation.save(update_fields=["status", "updated_at"])
-            raise ValidationError(_("This invitation has expired."))
-        if not invitation.user.is_active:
-            raise ValidationError(_("Your user account is inactive."))
+            raise ValidationError(
+                _("This invitation has expired.")
+            )
+
+        if user is None:
+            raise ValidationError(
+                _("You must be logged in to accept this invitation.")
+            )
+
+        if not user.is_active:
+            raise ValidationError(
+                _("Your user account is inactive.")
+            )
+
+        if not user.email or user.email.casefold() != invitation.email.casefold():
+            raise ValidationError(
+                _("This invitation was sent to a different email address.")
+            )
+
         try:
-            invitation.tenant.add_user(invitation.user)
+            invitation.tenant.add_user(user)
         except ExistsError as exc:
-            raise ValidationError(_("You are already a member of this organization.")) from exc
+            raise ValidationError(
+                _("You are already a member of this organization.")
+            ) from exc
+
         invitation.status = self.Status.ACCEPTED
         invitation.accepted_at = timezone.now()
-        invitation.save(update_fields=["status", "accepted_at", "updated_at"])
-
+        invitation.save(
+            update_fields=[
+                "status",
+                "accepted_at",
+                "updated_at",
+            ]
+        )
+        
     def decline(self) -> None:
         if self.status != self.Status.PENDING:
             raise ValidationError(_("This invitation is no longer available."))

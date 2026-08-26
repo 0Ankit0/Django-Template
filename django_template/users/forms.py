@@ -1,6 +1,9 @@
+from __future__ import annotations
+from typing import TYPE_CHECKING
+
 from allauth.account.forms import SignupForm
 from allauth.socialaccount.forms import SignupForm as SocialSignupForm
-from django.contrib.auth import forms as admin_forms
+from unfold import forms as admin_forms
 from django.utils.translation import gettext_lazy as _
 
 from .models import User
@@ -11,7 +14,7 @@ class UserAdminChangeForm(admin_forms.UserChangeForm):
         model = User
 
 
-class UserAdminCreationForm(admin_forms.AdminUserCreationForm):
+class UserAdminCreationForm(admin_forms.UserCreationForm):
     """
     Form for User Creation in the Admin Area.
     To change user signup, see UserSignupForm and UserSocialSignupForm.
