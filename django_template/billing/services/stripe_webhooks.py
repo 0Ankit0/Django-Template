@@ -4,7 +4,8 @@ from django.db import transaction
 from django.utils import timezone
 
 from ..models import CheckoutSession, Payment, Provider, Subscription, WebhookEvent
-from .stripe import _dt, _price_from_event, create_or_update_one_time_subscription, sync_invoice, sync_payment_intent, sync_subscription
+from .payment import create_or_update_one_time_subscription
+from .stripe import _dt, _price_from_event, sync_invoice, sync_payment_intent, sync_subscription
 
 STRIPE_WEBHOOK_EVENTS = (
     "checkout.session.completed", "checkout.session.async_payment_succeeded", "checkout.session.async_payment_failed", "checkout.session.expired",
