@@ -12,15 +12,13 @@ from django.utils import timezone
 from .invoice import build_invoice_pdf
 from .models import Invoice, Price, Product, Provider, WebhookEvent
 from .services import create_stripe_customer, create_stripe_price, create_stripe_product, expire_one_time_subscriptions
-from .services.webhook import handle_webhook
 from .services.stripe_webhooks import process_stripe_webhook_event
 
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_backoff_max=300, retry_kwargs={"max_retries": 8})
 def sync_product_to_stripe(self, product_id: int) -> None:
     close_old_connections()
-    product = Product.objects.get(pk=product_id)
-    create_stripe_product(product)
+    create_stripe_product(Product.objects.get(pk=product_id))
 
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_backoff_max=300, retry_kwargs={"max_retries": 8})
@@ -36,15 +34,13 @@ def sync_price_to_stripe(self, price_id: int) -> None:
 def sync_customer_to_stripe(self, customer_id: int) -> None:
     close_old_connections()
     from .models import BillingCustomer
-    customer = BillingCustomer.objects.get(pk=customer_id, provider=Provider.STRIPE)
-    create_stripe_customer(customer)
+    create_stripe_customer(BillingCustomer.objects.get(pk=customer_id, provider=Provider.STRIPE))
 
 
 @shared_task(bind=True, autoretry_for=(Exception,), retry_backoff=True, retry_backoff_max=300, retry_kwargs={"max_retries": 8})
 def process_stripe_webhook(self, webhook_event_id: int) -> None:
     close_old_connections()
-    event = WebhookEvent.objects.get(pk=webhook_event_id, provider=Provider.STRIPE)
-    process_stripe_webhook_event(event)
+    process_stripe_webhook_event(WebhookEvent.objects.get(pk=webhook_event_id, provider=Provider.STRIPE))
 
 
 @shared_task
