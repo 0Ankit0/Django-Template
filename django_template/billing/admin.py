@@ -8,8 +8,8 @@ from .models import BillingCustomer, CheckoutSession, Feature, Invoice, Payment,
 class PriceInline(TabularInline):
     model = Price
     extra = 0
-    fields = ["nickname", "amount", "currency", "interval", "interval_count", "active", "stripe_price_id"]
-    readonly_fields = ["stripe_price_id"]
+    fields = ["nickname", "amount", "currency", "interval", "interval_count", "active", "provider_price_id"]
+    readonly_fields = ["provider_price_id"]
 
 
 class ProductFeatureInline(TabularInline):
@@ -29,10 +29,10 @@ class ProductAdmin(ModelAdmin):
 
 @admin.register(Price)
 class PriceAdmin(ModelAdmin):
-    list_display = ["product", "nickname", "amount", "currency", "interval", "interval_count", "active", "stripe_price_id"]
+    list_display = ["product", "nickname", "amount", "currency", "interval", "interval_count", "active", "provider_price_id"]
     list_filter = ["active", "interval", "currency"]
-    search_fields = ["product__name", "nickname", "stripe_price_id"]
-    readonly_fields = ["stripe_price_id", "created_at"]
+    search_fields = ["product__name", "nickname", "provider_price_id"]
+    readonly_fields = ["provider_price_id", "created_at"]
 
 
 @admin.register(Feature)

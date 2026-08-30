@@ -16,7 +16,7 @@ class Product(models.Model):
     slug = models.SlugField(_("Slug"), unique=True)
     description = models.TextField(_("Description"), blank=True)
     active = models.BooleanField(_("Active"), default=True)
-    stripe_product_id = models.CharField(max_length=255, blank=True, editable=False)
+    provider_product_id = models.CharField(max_length=255, blank=True, editable=False)
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -42,7 +42,7 @@ class Price(models.Model):
     interval = models.CharField(max_length=20, choices=Interval.choices, default=Interval.MONTH)
     interval_count = models.PositiveIntegerField(default=1)
     active = models.BooleanField(default=True)
-    stripe_price_id = models.CharField(max_length=255, blank=True, editable=False)
+    provider_price_id = models.CharField(max_length=255, blank=True, editable=False)
     metadata = models.JSONField(default=dict, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
 

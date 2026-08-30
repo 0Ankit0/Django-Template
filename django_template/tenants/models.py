@@ -13,10 +13,10 @@ from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from django_tenants.models import DomainMixin
 from tenant_users.tenants.models import ExistsError
+from tenant_users.tenants.models import TenantBase
 
 if TYPE_CHECKING:
-    from tenant_users.tenants.models import TenantBase
-
+    pass
 
 def default_invitation_expiry():
     return timezone.now() + timedelta(days=7)

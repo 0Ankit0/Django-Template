@@ -44,7 +44,7 @@ def create_or_get_customer(tenant, email: str = "", name: str = "") -> BillingCu
 
 
 def create_checkout_session(request, price: Price) -> CheckoutSession:
-    if not price.stripe_price_id:
+    if not price.provider_price_id:
         raise ValueError("This price has not been synchronized to Stripe yet.")
     tenant = request.tenant
     customer = create_or_get_customer(
@@ -59,7 +59,7 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
     payload: dict[str, Any] = {
         "mode": mode,
         "customer": customer.provider_customer_id,
-        "line_items": [{"price": price.stripe_price_id, "quantity": 1}],
+        "line_items": [{"price": price.provider_price_id, "quantity": 1}],
         "success_url": success_url,
         "cancel_url": cancel_url,
         "client_reference_id": str(tenant.pk),

@@ -93,7 +93,7 @@ def change_subscription(subscription: Subscription, price: Price) -> Subscriptio
     items = stripe_subscription.items.data
     if not items:
         raise ValueError("Stripe subscription has no subscription items.")
-    response = _stripe_client().v1.subscriptions.update(subscription.provider_subscription_id, {"items": [{"id": items[0].id, "price": price.stripe_price_id}]})
+    response = _stripe_client().v1.subscriptions.update(subscription.provider_subscription_id, {"items": [{"id": items[0].id, "price": price.provider_price_id}]})
     return sync_subscription(_stripe_dict(response))
 
 
@@ -103,7 +103,7 @@ def sync_subscription(data: dict[str, Any]) -> Subscription:
     items = data.get("items", {}).get("data", [])
     if not items:
         raise ValueError("Stripe subscription has no price item.")
-    price = Price.objects.filter(stripe_price_id=str(items[0].get("price", {}).get("id", ""))).first()
+    price = Price.objects.filter(provider_price_id=str(items[0].get("price", {}).get("id", ""))).first()
     if not price:
         raise ValueError("No local billing price for the Stripe price.")
     subscription, _ = Subscription.objects.get_or_create(provider=Provider.STRIPE, provider_subscription_id=data["id"], defaults={"tenant": customer.tenant, "price": price, "status": data.get("status", Subscription.Status.INCOMPLETE), "provider_customer_id": customer_id})
