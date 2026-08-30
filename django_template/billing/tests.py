@@ -105,12 +105,7 @@ def test_khalti_checkout_requires_npr_and_one_time_price(monkeypatch):
         user=SimpleNamespace(name="Test User", email="test@example.com", phone="9800000000"),
         build_absolute_uri=lambda path: f"https://tenant.example{path}",
     )
-    price = SimpleNamespace(
-        currency="NPR",
-        is_recurring=False,
-        amount=10000,
-        product=SimpleNamespace(name="Pro"),
-    )
+    price = SimpleNamespace(currency="NPR", is_recurring=False, amount=10000, product=SimpleNamespace(name="Pro"))
     monkeypatch.setattr(
         "django_template.billing.services.providers._json_request",
         lambda *args, **kwargs: {"pidx": "pidx-test", "payment_url": "https://pay.test/khalti"},
@@ -200,7 +195,7 @@ def test_one_time_payment_creates_subscription_until_selected_duration(_public_t
 
 
 @pytest.mark.django_db
-def test_one_time_payment_requires_success():
+def test_one_time_payment_requires_success(_public_tenant):
     product = Product.objects.create(name="Pro", slug="pro-payment-status")
     price = Price.objects.create(
         product=product,
