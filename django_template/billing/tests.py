@@ -2,7 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from types import SimpleNamespace
 
 import pytest
@@ -10,13 +10,14 @@ import stripe
 from django.contrib import admin
 from django.test import override_settings
 
-from .models import Feature, Price, Product, ProductFeature, Provider, ProviderConfiguration
+from .models import Feature, Payment, Price, Product, ProductFeature, Provider, ProviderConfiguration
 from .services import (
     STRIPE_WEBHOOK_EVENTS,
     add_price_interval,
     build_invoice_pdf,
     create_esewa_checkout,
     create_khalti_checkout,
+    create_or_update_one_time_subscription,
     handle_webhook,
     verify_esewa_response,
 )
@@ -159,6 +160,66 @@ def test_one_time_price_keeps_duration_interval_instead_of_using_one_time_interv
     assert price.interval == Price.Interval.YEAR
     assert price.interval_count == 1
     assert " / " not in str(price)
+
+
+@pytest.mark.django_db
+def test_one_time_payment_creates_subscription_until_selected_duration(_public_tenant):
+    product = Product.objects.create(name="90 Day Pass", slug="90-day-pass")
+    price = Price.objects.create(
+        product=product,
+        amount=9000,
+        currency="NPR",
+        interval=Price.Interval.DAY,
+        interval_count=90,
+        metadata={"one_time": True},
+    )
+    paid_at = datetime(2026, 8, 30, 10, 0, tzinfo=timezone.utc)
+    payment = Payment.objects.create(
+        tenant=_public_tenant,
+        amount=price.amount,
+        currency=price.currency,
+        status=Payment.Status.SUCCEEDED,
+        provider=Provider.KHALTI,
+        provider_payment_id="khalti-txn-90-day",
+        paid_at=paid_at,
+        metadata={"pidx": "pidx-90-day"},
+    )
+    subscription = create_or_update_one_time_subscription(
+        payment,
+        price,
+        provider_reference="pidx-90-day",
+    )
+    assert subscription.provider == Provider.KHALTI
+    assert subscription.status == subscription.Status.ACTIVE
+    assert subscription.current_period_start == paid_at
+    assert subscription.current_period_end == paid_at + timedelta(days=90)
+    assert subscription.cancel_at_period_end is True
+    assert subscription.canceled_at is None
+    payment.refresh_from_db()
+    assert payment.subscription_id == subscription.pk
+
+
+@pytest.mark.django_db
+def test_one_time_payment_requires_success():
+    product = Product.objects.create(name="Pro", slug="pro-payment-status")
+    price = Price.objects.create(
+        product=product,
+        amount=1000,
+        currency="NPR",
+        interval=Price.Interval.MONTH,
+        interval_count=1,
+        metadata={"one_time": True},
+    )
+    payment = Payment.objects.create(
+        tenant=_public_tenant,
+        amount=1000,
+        currency="NPR",
+        status=Payment.Status.PENDING,
+        provider=Provider.ESEWA,
+        provider_payment_id="esewa-pending",
+    )
+    with pytest.raises(ValueError, match="successful payments"):
+        create_or_update_one_time_subscription(payment, price, provider_reference="esewa-pending")
 
 
 def test_billing_models_are_registered_in_admin():
