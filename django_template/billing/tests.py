@@ -11,7 +11,15 @@ from django.contrib import admin
 from django.test import override_settings
 
 from .models import Feature, Price, Product, ProductFeature, Provider, ProviderConfiguration
-from .services import STRIPE_WEBHOOK_EVENTS, build_invoice_pdf, create_esewa_checkout, create_khalti_checkout, handle_webhook, verify_esewa_response
+from .services import (
+    STRIPE_WEBHOOK_EVENTS,
+    add_price_interval,
+    build_invoice_pdf,
+    create_esewa_checkout,
+    create_khalti_checkout,
+    handle_webhook,
+    verify_esewa_response,
+)
 
 
 @pytest.mark.django_db
@@ -49,7 +57,16 @@ def test_stripe_webhook_event_scope_is_payment_and_billing_only():
 
 
 def test_local_invoice_pdf_is_valid_pdf_bytes():
-    pdf = build_invoice_pdf(invoice_number="INV-KHALTI-00000001", tenant_name="Acme", provider=Provider.KHALTI, product_name="Pro", amount="100.00", currency="NPR", payment_reference="txn-123", issued_at=datetime(2026, 8, 25, tzinfo=timezone.utc))
+    pdf = build_invoice_pdf(
+        invoice_number="INV-KHALTI-00000001",
+        tenant_name="Acme",
+        provider=Provider.KHALTI,
+        product_name="Pro",
+        amount="100.00",
+        currency="NPR",
+        payment_reference="txn-123",
+        issued_at=datetime(2026, 8, 25, tzinfo=timezone.utc),
+    )
     assert pdf.startswith(b"%PDF-1.4")
     assert b"INV-KHALTI-00000001" in pdf
     assert pdf.endswith(b"%%EOF\n")
@@ -64,7 +81,14 @@ def test_stripe_webhook_uses_official_sdk(monkeypatch, settings):
 
 
 def test_esewa_signature_verification_rejects_tampering():
-    data = {"transaction_code": "000ABCD", "status": "COMPLETE", "total_amount": "100.00", "transaction_uuid": "test-uuid", "product_code": "EPAYTEST", "signed_field_names": "transaction_code,status,total_amount,transaction_uuid,product_code"}
+    data = {
+        "transaction_code": "000ABCD",
+        "status": "COMPLETE",
+        "total_amount": "100.00",
+        "transaction_uuid": "test-uuid",
+        "product_code": "EPAYTEST",
+        "signed_field_names": "transaction_code,status,total_amount,transaction_uuid,product_code",
+    }
     message = ",".join(f"{name}={data[name]}" for name in data["signed_field_names"].split(","))
     data["signature"] = base64.b64encode(hmac.new(b"test-secret", message.encode(), hashlib.sha256).digest()).decode()
     with override_settings(ESEWA_SECRET_KEY="test-secret"):
@@ -75,9 +99,21 @@ def test_esewa_signature_verification_rejects_tampering():
 
 
 def test_khalti_checkout_requires_npr_and_one_time_price(monkeypatch):
-    request = SimpleNamespace(tenant=SimpleNamespace(pk=1), user=SimpleNamespace(name="Test User", email="test@example.com", phone="9800000000"), build_absolute_uri=lambda path: f"https://tenant.example{path}")
-    price = SimpleNamespace(currency="NPR", is_recurring=False, amount=10000, product=SimpleNamespace(name="Pro"))
-    monkeypatch.setattr("django_template.billing.services.providers._json_request", lambda *args, **kwargs: {"pidx": "pidx-test", "payment_url": "https://pay.test/khalti"})
+    request = SimpleNamespace(
+        tenant=SimpleNamespace(pk=1),
+        user=SimpleNamespace(name="Test User", email="test@example.com", phone="9800000000"),
+        build_absolute_uri=lambda path: f"https://tenant.example{path}",
+    )
+    price = SimpleNamespace(
+        currency="NPR",
+        is_recurring=False,
+        amount=10000,
+        product=SimpleNamespace(name="Pro"),
+    )
+    monkeypatch.setattr(
+        "django_template.billing.services.providers._json_request",
+        lambda *args, **kwargs: {"pidx": "pidx-test", "payment_url": "https://pay.test/khalti"},
+    )
     with override_settings(KHALTI_SECRET_KEY="test-key", KHALTI_ENVIRONMENT="sandbox"):
         result = create_khalti_checkout(request, price)
     assert result.provider == Provider.KHALTI
@@ -98,6 +134,31 @@ def test_esewa_checkout_builds_signed_uat_form():
         result = create_esewa_checkout(request, price)
     assert result.provider == Provider.ESEWA
     assert result.form_fields["total_amount"] == "100.00"
+
+
+def test_one_time_duration_uses_selected_interval_and_count():
+    start = datetime(2026, 1, 31, 12, 0, tzinfo=timezone.utc)
+    assert add_price_interval(start, SimpleNamespace(interval=Price.Interval.MONTH, interval_count=1)) == datetime(2026, 2, 28, 12, 0, tzinfo=timezone.utc)
+    assert add_price_interval(start, SimpleNamespace(interval=Price.Interval.MONTH, interval_count=3)) == datetime(2026, 4, 30, 12, 0, tzinfo=timezone.utc)
+    assert add_price_interval(start, SimpleNamespace(interval=Price.Interval.YEAR, interval_count=2)) == datetime(2028, 1, 31, 12, 0, tzinfo=timezone.utc)
+    assert add_price_interval(start, SimpleNamespace(interval=Price.Interval.WEEK, interval_count=2)) == datetime(2026, 2, 14, 12, 0, tzinfo=timezone.utc)
+
+
+@pytest.mark.django_db
+def test_one_time_price_keeps_duration_interval_instead_of_using_one_time_interval():
+    product = Product.objects.create(name="Annual Pass", slug="annual-pass")
+    price = Price.objects.create(
+        product=product,
+        amount=12000,
+        currency="NPR",
+        interval=Price.Interval.YEAR,
+        interval_count=1,
+        metadata={"one_time": True},
+    )
+    assert price.is_one_time is True
+    assert price.interval == Price.Interval.YEAR
+    assert price.interval_count == 1
+    assert " / " not in str(price)
 
 
 def test_billing_models_are_registered_in_admin():
