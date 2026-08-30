@@ -33,6 +33,7 @@ def restore_billing_data(apps, schema_editor):
     Price = apps.get_model("billing", "Price")
     Payment = apps.get_model("billing", "Payment")
     Invoice = apps.get_model("billing", "Invoice")
+    Price.objects.filter(interval="one_time").update(interval="month")
     for model in (Price, Payment, Invoice):
         model.objects.filter(currency="NPR").update(currency="npr")
         model.objects.filter(currency="USD").update(currency="usd")
