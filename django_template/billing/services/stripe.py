@@ -6,7 +6,6 @@ from typing import Any
 
 import stripe
 from django.conf import settings
-from django.db import transaction
 from django.urls import reverse
 from django.utils import timezone
 
@@ -69,12 +68,10 @@ def _add_interval(start: datetime, interval: str, count: int) -> datetime:
 def create_stripe_product(product: Product) -> Product:
     if product.provider_product_id:
         return product
-    data = _stripe_dict(_stripe_client().v1.products.create({
-        "name": product.name,
-        "description": product.description,
-        "active": product.active,
-        "metadata": {"local_product_id": str(product.pk), **{str(k): str(v) for k, v in product.metadata.items()}},
-    }))
+    data = _stripe_dict(_stripe_client().v1.products.create(
+        {"name": product.name, "description": product.description, "active": product.active, "metadata": {"local_product_id": str(product.pk), **{str(k): str(v) for k, v in product.metadata.items()}}},
+        options={"idempotency_key": f"billing-product-{product.pk}"},
+    ))
     Product.objects.filter(pk=product.pk, provider_product_id__isnull=True).update(provider_product_id=data["id"], updated_at=timezone.now())
     product.provider_product_id = data["id"]
     return product
@@ -86,16 +83,10 @@ def create_stripe_price(price: Price) -> Price:
     product = price.product
     if not product.provider_product_id:
         raise ValueError("Product must have a Stripe product ID before creating a Stripe price.")
-    params: dict[str, Any] = {
-        "product": product.provider_product_id,
-        "unit_amount": price.amount,
-        "currency": price.currency.lower(),
-        "active": price.active,
-        "metadata": {"local_price_id": str(price.pk), **{str(k): str(v) for k, v in price.metadata.items()}},
-    }
+    params: dict[str, Any] = {"product": product.provider_product_id, "unit_amount": price.amount, "currency": price.currency.lower(), "active": price.active, "metadata": {"local_price_id": str(price.pk), **{str(k): str(v) for k, v in price.metadata.items()}}}
     if price.is_recurring:
         params["recurring"] = {"interval": price.interval, "interval_count": price.interval_count}
-    data = _stripe_dict(_stripe_client().v1.prices.create(params))
+    data = _stripe_dict(_stripe_client().v1.prices.create(params, options={"idempotency_key": f"billing-price-{price.pk}"}))
     Price.objects.filter(pk=price.pk, provider_price_id__isnull=True).update(provider_price_id=data["id"], updated_at=timezone.now())
     price.provider_price_id = data["id"]
     return price
@@ -104,22 +95,17 @@ def create_stripe_price(price: Price) -> Price:
 def create_stripe_customer(customer: BillingCustomer) -> BillingCustomer:
     if customer.provider_customer_id:
         return customer
-    data = _stripe_dict(_stripe_client().v1.customers.create({
-        "email": customer.email or None,
-        "name": customer.name or None,
-        "metadata": {"tenant_id": str(customer.tenant_id), "local_customer_id": str(customer.pk)},
-    }))
+    data = _stripe_dict(_stripe_client().v1.customers.create(
+        {"email": customer.email or None, "name": customer.name or None, "metadata": {"tenant_id": str(customer.tenant_id), "local_customer_id": str(customer.pk)}},
+        options={"idempotency_key": f"billing-customer-{customer.pk}"},
+    ))
     BillingCustomer.objects.filter(pk=customer.pk, provider_customer_id__isnull=True).update(provider_customer_id=data["id"], updated_at=timezone.now())
     customer.provider_customer_id = data["id"]
     return customer
 
 
 def create_or_get_customer(tenant, email: str = "", name: str = "") -> BillingCustomer:
-    customer, _ = BillingCustomer.objects.get_or_create(
-        tenant=tenant,
-        provider=Provider.STRIPE,
-        defaults={"email": email, "name": name},
-    )
+    customer, _ = BillingCustomer.objects.get_or_create(tenant=tenant, provider=Provider.STRIPE, defaults={"email": email, "name": name})
     changed = False
     if email and customer.email != email:
         customer.email = email
@@ -141,15 +127,7 @@ def create_checkout_session(request, price: Price) -> CheckoutSession:
     customer = create_or_get_customer(tenant, getattr(request.user, "email", ""), getattr(request.user, "name", "") or str(request.user))
     mode = CheckoutSession.Mode.PAYMENT if price.is_one_time else CheckoutSession.Mode.SUBSCRIPTION
     metadata = {"tenant_id": str(tenant.pk), "price_id": str(price.pk)}
-    payload: dict[str, Any] = {
-        "mode": mode,
-        "customer": customer.provider_customer_id,
-        "line_items": [{"price": price.provider_price_id, "quantity": 1}],
-        "success_url": request.build_absolute_uri("/billing/success/") + "?provider=stripe&session_id={CHECKOUT_SESSION_ID}",
-        "cancel_url": request.build_absolute_uri(f"/billing/cancelled/?provider=stripe&price_id={price.pk}"),
-        "client_reference_id": str(tenant.pk),
-        "metadata": metadata,
-    }
+    payload: dict[str, Any] = {"mode": mode, "customer": customer.provider_customer_id, "line_items": [{"price": price.provider_price_id, "quantity": 1}], "success_url": request.build_absolute_uri("/billing/success/") + "?provider=stripe&session_id={CHECKOUT_SESSION_ID}", "cancel_url": request.build_absolute_uri(f"/billing/cancelled/?provider=stripe&price_id={price.pk}"), "client_reference_id": str(tenant.pk), "metadata": metadata}
     if price.is_one_time:
         payload["payment_intent_data"] = {"metadata": metadata}
         payload["invoice_creation"] = {"enabled": True, "invoice_data": {"metadata": metadata}}
@@ -180,10 +158,9 @@ def change_subscription(subscription: Subscription, price: Price) -> Subscriptio
     if not price.provider_price_id:
         raise ValueError("The target price has not been synchronized to Stripe.")
     remote = _stripe_client().v1.subscriptions.retrieve(subscription.provider_subscription_id)
-    items = remote.items.data
-    if not items:
+    if not remote.items.data:
         raise ValueError("Stripe subscription has no subscription items.")
-    data = _stripe_dict(_stripe_client().v1.subscriptions.update(subscription.provider_subscription_id, {"items": [{"id": items[0].id, "price": price.provider_price_id}]}))
+    data = _stripe_dict(_stripe_client().v1.subscriptions.update(subscription.provider_subscription_id, {"items": [{"id": remote.items.data[0].id, "price": price.provider_price_id}]}))
     return sync_subscription(data)
 
 
@@ -193,8 +170,7 @@ def sync_subscription(data: dict[str, Any]) -> Subscription:
     items = data.get("items", {}).get("data", [])
     if not items:
         raise ValueError("Stripe subscription has no price item.")
-    stripe_price_id = str((items[0].get("price") or {}).get("id") or "")
-    price = Price.objects.filter(provider_price_id=stripe_price_id).first()
+    price = Price.objects.filter(provider_price_id=str((items[0].get("price") or {}).get("id") or "")).first()
     if not price:
         raise ValueError("No local billing price for the Stripe price.")
     subscription, _ = Subscription.objects.get_or_create(provider=Provider.STRIPE, provider_subscription_id=data["id"], defaults={"tenant": customer.tenant, "price": price, "status": data.get("status", Subscription.Status.INCOMPLETE), "provider_customer_id": customer_id})
@@ -258,14 +234,16 @@ def sync_payment_intent(data: dict[str, Any]) -> Payment | None:
         customer = BillingCustomer.objects.filter(tenant_id=metadata["tenant_id"], provider=Provider.STRIPE).select_related("tenant").first()
     if not customer:
         return None
+    subscription = Subscription.objects.filter(provider=Provider.STRIPE, provider_customer_id=customer_id, status__in=[Subscription.Status.ACTIVE, Subscription.Status.TRIALING, Subscription.Status.PAST_DUE]).order_by("-created_at").first()
     payment, _ = Payment.objects.get_or_create(provider=Provider.STRIPE, provider_payment_id=payment_id, defaults={"tenant": customer.tenant, "amount": int(data.get("amount_received") or data.get("amount") or 0), "currency": str(data.get("currency") or "usd").upper(), "status": Payment.Status.PENDING})
     payment.tenant = customer.tenant
+    payment.subscription = subscription
     payment.amount = int(data.get("amount_received") or data.get("amount") or payment.amount)
     payment.currency = str(data.get("currency") or payment.currency).upper()
     payment.status = Payment.Status.SUCCEEDED if data.get("status") == "succeeded" else Payment.Status.FAILED if data.get("status") in {"requires_payment_method", "canceled"} else Payment.Status.PENDING
     if payment.status == Payment.Status.SUCCEEDED and not payment.paid_at:
         payment.paid_at = timezone.now()
-    payment.metadata = metadata or payment.metadata
+    payment.metadata = {**payment.metadata, **metadata, "customer_id": customer_id} if customer_id else {**payment.metadata, **metadata}
     payment.save()
     return payment
 
@@ -280,7 +258,7 @@ def create_or_update_one_time_subscription(payment: Payment, price: Price, *, pr
     subscription.tenant = payment.tenant
     subscription.price = price
     subscription.status = Subscription.Status.ACTIVE if expires_at > timezone.now() else Subscription.Status.CANCELED
-    subscription.provider_customer_id = payment.metadata.get("customer_id", "")
+    subscription.provider_customer_id = payment.metadata.get("customer_id") or None
     subscription.current_period_start = starts_at
     subscription.current_period_end = expires_at
     subscription.cancel_at_period_end = True
