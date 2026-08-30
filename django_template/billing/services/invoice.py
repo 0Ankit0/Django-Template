@@ -22,7 +22,6 @@ def build_invoice_pdf(*, invoice_number: str, tenant_name: str, provider: str, p
     ]
     if period_end:
         lines.append(f"Access until: {period_end:%Y-%m-%d %H:%M UTC}")
-
     content_lines = ["BT", "/F1 11 Tf", "72 760 Td"]
     for index, line in enumerate(lines):
         if index:
@@ -30,7 +29,6 @@ def build_invoice_pdf(*, invoice_number: str, tenant_name: str, provider: str, p
         content_lines.append(f"({_pdf_escape(line)}) Tj")
     content_lines.append("ET")
     stream = "\n".join(content_lines).encode("latin-1", "replace")
-
     objects = [
         b"1 0 obj << /Type /Catalog /Pages 2 0 R >> endobj\n",
         b"2 0 obj << /Type /Pages /Kids [3 0 R] /Count 1 >> endobj\n",
@@ -38,7 +36,6 @@ def build_invoice_pdf(*, invoice_number: str, tenant_name: str, provider: str, p
         b"4 0 obj << /Type /Font /Subtype /Type1 /BaseFont /Helvetica >> endobj\n",
         f"5 0 obj << /Length {len(stream)} >> stream\n".encode() + stream + b"\nendstream endobj\n",
     ]
-
     buffer = BytesIO(b"%PDF-1.4\n")
     offsets = [0]
     for obj in objects:
@@ -49,7 +46,5 @@ def build_invoice_pdf(*, invoice_number: str, tenant_name: str, provider: str, p
     buffer.write(b"0000000000 65535 f \n")
     for offset in offsets[1:]:
         buffer.write(f"{offset:010d} 00000 n \n".encode())
-    buffer.write(
-        f"trailer << /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode(),
-    )
+    buffer.write(f"trailer << /Size {len(objects) + 1} /Root 1 0 R >>\nstartxref\n{xref_offset}\n%%EOF\n".encode())
     return buffer.getvalue()
