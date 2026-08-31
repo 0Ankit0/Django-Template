@@ -45,7 +45,20 @@ def process_stripe_webhook(self, webhook_event_id: int) -> None:
 def retry_unprocessed_stripe_webhooks() -> int:
     close_old_connections()
     stale_before = timezone.now() - timedelta(minutes=10)
-    ids = list(WebhookEvent.objects.filter(provider=Provider.STRIPE, processed=False).filter(Q(processing=False) | Q(processing=True, created_at__lt=stale_before)).values_list("pk", flat=True)[:100])
+
+    # A worker can disappear after claiming an event. Release stale claims so the
+    # durable WebhookEvent can be processed again instead of remaining stuck forever.
+    WebhookEvent.objects.filter(
+        provider=Provider.STRIPE,
+        processed=False,
+        processing=True,
+        created_at__lt=stale_before,
+    ).update(processing=False)
+
+    ids = list(
+        WebhookEvent.objects.filter(provider=Provider.STRIPE, processed=False, processing=False)
+        .values_list("pk", flat=True)[:100]
+    )
     for event_id in ids:
         process_stripe_webhook.delay(event_id)
     return len(ids)

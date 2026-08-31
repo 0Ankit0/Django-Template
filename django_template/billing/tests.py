@@ -10,7 +10,7 @@ import stripe
 from django.contrib import admin
 from django.test import override_settings
 
-from .models import Feature, Payment, Price, Product, ProductFeature, Provider, ProviderConfiguration
+from .models import BillingCustomer, Feature, Invoice, Payment, Price, Product, ProductFeature, Provider, ProviderConfiguration, Subscription, WebhookEvent
 from .services import (
     STRIPE_WEBHOOK_EVENTS,
     add_price_interval,
@@ -19,6 +19,7 @@ from .services import (
     create_khalti_checkout,
     create_or_update_one_time_subscription,
     handle_webhook,
+    process_stripe_webhook_event,
     verify_esewa_response,
 )
 
@@ -143,14 +144,7 @@ def test_one_time_duration_uses_selected_interval_and_count():
 @pytest.mark.django_db
 def test_one_time_price_keeps_duration_interval_instead_of_using_one_time_interval():
     product = Product.objects.create(name="Annual Pass", slug="annual-pass")
-    price = Price.objects.create(
-        product=product,
-        amount=12000,
-        currency="NPR",
-        interval=Price.Interval.YEAR,
-        interval_count=1,
-        metadata={"one_time": True},
-    )
+    price = Price.objects.create(product=product, amount=12000, currency="NPR", interval=Price.Interval.YEAR, interval_count=1, metadata={"one_time": True})
     assert price.is_one_time is True
     assert price.interval == Price.Interval.YEAR
     assert price.interval_count == 1
@@ -160,30 +154,10 @@ def test_one_time_price_keeps_duration_interval_instead_of_using_one_time_interv
 @pytest.mark.django_db
 def test_one_time_payment_creates_subscription_until_selected_duration(_public_tenant):
     product = Product.objects.create(name="90 Day Pass", slug="90-day-pass")
-    price = Price.objects.create(
-        product=product,
-        amount=9000,
-        currency="NPR",
-        interval=Price.Interval.DAY,
-        interval_count=90,
-        metadata={"one_time": True},
-    )
+    price = Price.objects.create(product=product, amount=9000, currency="NPR", interval=Price.Interval.DAY, interval_count=90, metadata={"one_time": True})
     paid_at = datetime(2026, 8, 30, 10, 0, tzinfo=timezone.utc)
-    payment = Payment.objects.create(
-        tenant=_public_tenant,
-        amount=price.amount,
-        currency=price.currency,
-        status=Payment.Status.SUCCEEDED,
-        provider=Provider.KHALTI,
-        provider_payment_id="khalti-txn-90-day",
-        paid_at=paid_at,
-        metadata={"pidx": "pidx-90-day"},
-    )
-    subscription = create_or_update_one_time_subscription(
-        payment,
-        price,
-        provider_reference="pidx-90-day",
-    )
+    payment = Payment.objects.create(tenant=_public_tenant, amount=price.amount, currency=price.currency, status=Payment.Status.SUCCEEDED, provider=Provider.KHALTI, provider_payment_id="khalti-txn-90-day", paid_at=paid_at, metadata={"pidx": "pidx-90-day"})
+    subscription = create_or_update_one_time_subscription(payment, price, provider_reference="pidx-90-day")
     assert subscription.provider == Provider.KHALTI
     assert subscription.status == subscription.Status.ACTIVE
     assert subscription.current_period_start == paid_at
@@ -197,24 +171,62 @@ def test_one_time_payment_creates_subscription_until_selected_duration(_public_t
 @pytest.mark.django_db
 def test_one_time_payment_requires_success(_public_tenant):
     product = Product.objects.create(name="Pro", slug="pro-payment-status")
-    price = Price.objects.create(
-        product=product,
-        amount=1000,
-        currency="NPR",
-        interval=Price.Interval.MONTH,
-        interval_count=1,
-        metadata={"one_time": True},
-    )
-    payment = Payment.objects.create(
-        tenant=_public_tenant,
-        amount=1000,
-        currency="NPR",
-        status=Payment.Status.PENDING,
-        provider=Provider.ESEWA,
-        provider_payment_id="esewa-pending",
-    )
+    price = Price.objects.create(product=product, amount=1000, currency="NPR", interval=Price.Interval.MONTH, interval_count=1, metadata={"one_time": True})
+    payment = Payment.objects.create(tenant=_public_tenant, amount=1000, currency="NPR", status=Payment.Status.PENDING, provider=Provider.ESEWA, provider_payment_id="esewa-pending")
     with pytest.raises(ValueError, match="successful payments"):
         create_or_update_one_time_subscription(payment, price, provider_reference="esewa-pending")
+
+
+@pytest.mark.django_db
+def test_stripe_invoice_paid_reconciles_subscription_and_payment_when_subscription_event_arrives_late(monkeypatch, _public_tenant):
+    product = Product.objects.create(name="Pro", slug="stripe-pro")
+    price = Price.objects.create(product=product, amount=1500, currency="USD", provider_price_id="price_stripe")
+    BillingCustomer.objects.create(tenant=_public_tenant, provider=Provider.STRIPE, provider_customer_id="cus_test", email="test@example.com", name="Test User")
+    webhook = WebhookEvent.objects.create(
+        provider=Provider.STRIPE,
+        event_id="evt_invoice_paid_late_subscription",
+        event_type="invoice.paid",
+        payload={"id": "evt_invoice_paid_late_subscription", "type": "invoice.paid", "data": {"object": {"id": "in_test", "customer": "cus_test", "subscription": "sub_test", "payment_intent": "pi_test", "status": "paid", "amount_due": 1500, "amount_paid": 1500, "currency": "usd", "number": "INV-TEST", "period_start": 1788150000, "period_end": 1790742000, "metadata": {"tenant_id": str(_public_tenant.pk), "price_id": str(price.pk)}}}},
+    )
+
+    objects = {
+        "subscription": {"id": "sub_test", "customer": "cus_test", "status": "active", "items": {"data": [{"price": {"id": "price_stripe"}}]}, "current_period_start": 1788150000, "current_period_end": 1790742000, "cancel_at_period_end": False, "metadata": {"tenant_id": str(_public_tenant.pk), "price_id": str(price.pk)}},
+        "payment_intent": {"id": "pi_test", "customer": "cus_test", "amount": 1500, "amount_received": 1500, "currency": "usd", "status": "succeeded", "metadata": {"tenant_id": str(_public_tenant.pk), "price_id": str(price.pk)}},
+    }
+    monkeypatch.setattr("django_template.billing.services.stripe_webhooks._stripe_retrieve", lambda kind, object_id: objects[kind])
+
+    process_stripe_webhook_event(webhook)
+
+    subscription = Subscription.objects.get(provider_subscription_id="sub_test")
+    invoice = Invoice.objects.get(provider_invoice_id="in_test")
+    payment = Payment.objects.get(provider_payment_id="pi_test")
+    webhook.refresh_from_db()
+    assert subscription.status == Subscription.Status.ACTIVE
+    assert invoice.subscription_id == subscription.pk
+    assert invoice.status == Invoice.Status.PAID
+    assert payment.subscription_id == subscription.pk
+    assert payment.status == Payment.Status.SUCCEEDED
+    assert payment.provider_invoice_id == invoice.provider_invoice_id
+    assert webhook.processed is True
+    assert webhook.error == ""
+    assert any(item["step"] == "processing_completed" for item in webhook.processing_log)
+
+
+@pytest.mark.django_db
+def test_stripe_webhook_failure_is_recorded_and_event_remains_retryable(_public_tenant):
+    webhook = WebhookEvent.objects.create(
+        provider=Provider.STRIPE,
+        event_id="evt_bad_invoice",
+        event_type="invoice.paid",
+        payload={"id": "evt_bad_invoice", "type": "invoice.paid", "data": {"object": {"id": "in_missing_customer", "customer": "cus_missing", "status": "paid"}}},
+    )
+    with pytest.raises(Exception):
+        process_stripe_webhook_event(webhook)
+    webhook.refresh_from_db()
+    assert webhook.processed is False
+    assert webhook.processing is False
+    assert webhook.error
+    assert any(item["step"] == "processing_failed" for item in webhook.processing_log)
 
 
 def test_billing_models_are_registered_in_admin():
