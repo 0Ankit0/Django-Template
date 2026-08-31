@@ -20,7 +20,14 @@ def handle_webhook(payload: bytes, signature: str) -> WebhookEvent:
     except (ValueError, stripe.SignatureVerificationError) as exc:
         raise ValueError("Invalid Stripe webhook signature or payload.") from exc
 
-    event_data: dict[str, Any] = json.loads(json.dumps(event.to_dict(), cls=DjangoJSONEncoder))
+    if hasattr(event, "to_dict_recursive"):
+        event_dict = event.to_dict_recursive()
+    elif hasattr(event, "to_dict"):
+        event_dict = event.to_dict()
+    else:
+        event_dict = dict(event)
+    event_data: dict[str, Any] = json.loads(json.dumps(event_dict, cls=DjangoJSONEncoder))
+
     with transaction.atomic():
         webhook, _ = WebhookEvent.objects.get_or_create(
             provider=Provider.STRIPE,
