@@ -190,6 +190,7 @@ def test_stripe_invoice_paid_reconciles_subscription_and_payment_when_subscripti
     )
 
     objects = {
+        "invoice": {"id": "in_test", "customer": "cus_test", "subscription": "sub_test", "payment_intent": "pi_test", "status": "paid", "amount_due": 1500, "amount_paid": 1500, "total": 1500, "currency": "usd", "number": "INV-TEST", "period_start": 1788150000, "period_end": 1790742000, "metadata": {"tenant_id": str(_public_tenant.pk), "price_id": str(price.pk)}},
         "subscription": {"id": "sub_test", "customer": "cus_test", "status": "active", "items": {"data": [{"price": {"id": "price_stripe"}}]}, "current_period_start": 1788150000, "current_period_end": 1790742000, "cancel_at_period_end": False, "metadata": {"tenant_id": str(_public_tenant.pk), "price_id": str(price.pk)}},
         "payment_intent": {"id": "pi_test", "customer": "cus_test", "amount": 1500, "amount_received": 1500, "currency": "usd", "status": "succeeded", "metadata": {"tenant_id": str(_public_tenant.pk), "price_id": str(price.pk)}},
     }
@@ -203,6 +204,7 @@ def test_stripe_invoice_paid_reconciles_subscription_and_payment_when_subscripti
     webhook.refresh_from_db()
     assert subscription.status == Subscription.Status.ACTIVE
     assert invoice.subscription_id == subscription.pk
+    assert invoice.amount_total == 1500
     assert invoice.status == Invoice.Status.PAID
     assert payment.subscription_id == subscription.pk
     assert payment.status == Payment.Status.SUCCEEDED
@@ -210,6 +212,36 @@ def test_stripe_invoice_paid_reconciles_subscription_and_payment_when_subscripti
     assert webhook.processed is True
     assert webhook.error == ""
     assert any(item["step"] == "processing_completed" for item in webhook.processing_log)
+
+
+@pytest.mark.django_db
+def test_stripe_balance_paid_invoice_creates_settlement_payment_and_keeps_invoice_total(monkeypatch, _public_tenant):
+    product = Product.objects.create(name="Pro", slug="stripe-balance")
+    price = Price.objects.create(product=product, amount=1000, currency="NPR", provider_price_id="price_stripe_balance")
+    BillingCustomer.objects.create(tenant=_public_tenant, provider=Provider.STRIPE, provider_customer_id="cus_balance", email="test@example.com", name="Test User")
+    webhook = WebhookEvent.objects.create(
+        provider=Provider.STRIPE,
+        event_id="evt_invoice_paid_balance",
+        event_type="invoice.paid",
+        payload={"id": "evt_invoice_paid_balance", "type": "invoice.paid", "data": {"object": {"id": "in_balance", "customer": "cus_balance", "subscription": "sub_balance", "status": "paid"}}},
+    )
+    objects = {
+        "invoice": {"id": "in_balance", "customer": "cus_balance", "subscription": "sub_balance", "status": "paid", "amount_due": 0, "amount_paid": 0, "total": 1000, "currency": "npr", "number": "AYSSS8IF-0006", "period_start": 1788150000, "period_end": 1790742000, "metadata": {"tenant_id": str(_public_tenant.pk), "price_id": str(price.pk)}, "payments": {"data": []}},
+        "subscription": {"id": "sub_balance", "customer": "cus_balance", "status": "active", "items": {"data": [{"price": {"id": "price_stripe_balance"}, "current_period_start": 1788150000, "current_period_end": 1790742000}]}, "metadata": {"tenant_id": str(_public_tenant.pk), "price_id": str(price.pk)}},
+    }
+    monkeypatch.setattr("django_template.billing.services.stripe_webhooks._stripe_retrieve", lambda kind, object_id: objects[kind])
+
+    process_stripe_webhook_event(webhook)
+
+    invoice = Invoice.objects.get(provider_invoice_id="in_balance")
+    payment = Payment.objects.get(provider_payment_id="invoice:in_balance")
+    assert invoice.amount_total == 1000
+    assert invoice.amount_due == 0
+    assert invoice.settled_amount == 1000
+    assert payment.amount == 1000
+    assert payment.status == Payment.Status.SUCCEEDED
+    assert payment.provider_invoice_id == invoice.provider_invoice_id
+    assert payment.metadata["settlement_type"] == "invoice_without_payment_intent"
 
 
 @pytest.mark.django_db
