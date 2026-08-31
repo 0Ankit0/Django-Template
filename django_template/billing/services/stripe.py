@@ -114,13 +114,16 @@ def create_stripe_price(price: Price) -> Price:
 
 
 def create_stripe_customer(customer: BillingCustomer) -> BillingCustomer:
+    if not customer or customer is None:
+        raise ValueError("Customer must be provided.")
     if customer.provider_customer_id:
         return customer
+   
     data = _stripe_dict(
         _stripe_client().v1.customers.create(
             {
-                "email": customer.email or None,
-                "name": customer.name or None,
+                "email": customer.email,
+                "name": customer.name,
                 "metadata": {
                     "tenant_id": str(customer.tenant_id),
                     "local_customer_id": str(customer.pk),
@@ -403,6 +406,7 @@ def sync_payment_intent(data: dict[str, Any]) -> Payment | None:
         )
         .order_by("-created_at")
         .first()
+    )
     payment, _ = Payment.objects.get_or_create(
         provider=Provider.STRIPE,
         provider_payment_id=payment_id,

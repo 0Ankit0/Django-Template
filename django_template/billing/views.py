@@ -134,7 +134,7 @@ def cancelled(request: HttpRequest) -> HttpResponse:
 
 @login_required
 @require_GET
-def invoice_download(request: HttpRequest, invoice_id: int) -> HttpResponse:
+def invoice_download(request: HttpRequest, invoice_id: int) -> FileResponse | HttpResponse:
     invoice = get_object_or_404(Invoice, pk=invoice_id, tenant=request.tenant)
     if not invoice.invoice_file:
         return HttpResponse("Invoice PDF is not ready yet.", status=404)
