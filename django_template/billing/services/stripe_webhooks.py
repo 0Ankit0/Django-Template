@@ -3,10 +3,10 @@ from __future__ import annotations
 from typing import Any
 
 import stripe
-from django.db import transaction
+from django.db import IntegrityError, transaction
 from django.utils import timezone
 
-from ..models import CheckoutSession, Payment, Provider, Subscription, WebhookEvent
+from ..models import CheckoutSession, Invoice, Payment, Provider, Subscription, WebhookEvent
 from .payment import create_or_update_one_time_subscription
 from .stripe import _dt, _price_from_event, _stripe_client, _stripe_dict, sync_invoice, sync_payment_intent, sync_subscription
 
@@ -47,12 +47,17 @@ def _append_log(log: list[dict[str, Any]], step: str, status: str = "ok", **deta
     log.append(entry)
 
 
-def _apply_subscription_item_period(subscription: Subscription, data: dict[str, Any]) -> Subscription:
-    """Support both legacy Stripe periods and current subscription-item periods."""
+def _subscription_period_data(data: dict[str, Any]) -> tuple[Any, Any]:
     items = data.get("items", {}).get("data", [])
     item = items[0] if items else {}
-    period_start = data.get("current_period_start") or item.get("current_period_start")
-    period_end = data.get("current_period_end") or item.get("current_period_end")
+    return (
+        data.get("current_period_start") or item.get("current_period_start"),
+        data.get("current_period_end") or item.get("current_period_end"),
+    )
+
+
+def _apply_subscription_item_period(subscription: Subscription, data: dict[str, Any]) -> Subscription:
+    period_start, period_end = _subscription_period_data(data)
     if period_start is not None:
         subscription.current_period_start = _dt(period_start)
     if period_end is not None:
@@ -63,7 +68,6 @@ def _apply_subscription_item_period(subscription: Subscription, data: dict[str, 
 
 
 def _invoice_payment_intent(data: dict[str, Any]) -> str:
-    """Return the payment intent from both legacy and modern Stripe Invoice shapes."""
     direct = data.get("payment_intent")
     if direct:
         return str(direct)
@@ -76,8 +80,57 @@ def _invoice_payment_intent(data: dict[str, Any]) -> str:
     return ""
 
 
+def _create_invoice_settlement_payment(invoice: Invoice, data: dict[str, Any], log: list[dict[str, Any]]) -> Payment | None:
+    if invoice.status != Invoice.Status.PAID:
+        return None
+
+    # A Stripe invoice can be marked paid by customer balance/credit without a
+    # PaymentIntent. The invoice total is still the settled commercial amount,
+    # while amount_due/amount_paid can both be zero because the balance covered it.
+    amount = int(data.get("total") or invoice.amount_total or data.get("amount_paid") or 0)
+    if amount <= 0:
+        _append_log(log, "settlement_payment_skipped", "ok", reason="zero_invoice_total")
+        return None
+
+    payment_id = f"invoice:{invoice.provider_invoice_id}"
+    defaults = {
+        "tenant": invoice.tenant,
+        "subscription": invoice.subscription,
+        "amount": amount,
+        "currency": str(data.get("currency") or invoice.currency).upper(),
+        "status": Payment.Status.SUCCEEDED,
+        "provider_invoice_id": invoice.provider_invoice_id,
+        "paid_at": invoice.paid_at or timezone.now(),
+        "metadata": {
+            "invoice_id": invoice.provider_invoice_id,
+            "settlement_type": "invoice_without_payment_intent",
+            "payment_source": "customer_balance_or_other_non_payment_intent_settlement",
+        },
+    }
+    try:
+        payment, _ = Payment.objects.update_or_create(
+            provider=Provider.STRIPE,
+            provider_payment_id=payment_id,
+            defaults=defaults,
+        )
+    except IntegrityError:
+        payment = Payment.objects.get(provider=Provider.STRIPE, provider_payment_id=payment_id)
+    _append_log(log, "invoice_settlement_payment_synced", payment_id=payment.pk, amount=amount, source=defaults["metadata"]["payment_source"])
+    return payment
+
+
 def _process_invoice(data: dict[str, Any], event_type: str, log: list[dict[str, Any]]):
-    subscription_id = str(data.get("subscription") or "")
+    invoice_id = str(data.get("id") or "")
+    if not invoice_id:
+        raise ValueError("Stripe invoice ID is missing.")
+
+    # Webhook payloads can be intentionally small. Re-read the authoritative
+    # invoice so payment references, total, balance, subscription and metadata
+    # are not lost because the event snapshot was incomplete.
+    remote_invoice = _stripe_retrieve("invoice", invoice_id)
+    invoice_data = {**data, **remote_invoice}
+
+    subscription_id = str(invoice_data.get("subscription") or "")
     subscription = Subscription.objects.filter(provider=Provider.STRIPE, provider_subscription_id=subscription_id).first() if subscription_id else None
 
     if subscription_id and not subscription:
@@ -91,29 +144,32 @@ def _process_invoice(data: dict[str, Any], event_type: str, log: list[dict[str, 
         subscription = _apply_subscription_item_period(subscription, remote_subscription)
         _append_log(log, "subscription_period_reconciled", subscription_id=subscription.pk)
 
-    invoice = sync_invoice(data)
-    _append_log(log, "invoice_synced", invoice_id=invoice.pk, stripe_invoice_id=invoice.provider_invoice_id)
+    invoice = sync_invoice(invoice_data)
+    invoice.amount_total = int(invoice_data.get("total") or invoice.amount_total or invoice_data.get("amount_due") or invoice_data.get("amount_paid") or 0)
+    invoice.subscription = subscription or invoice.subscription
+    invoice.save(update_fields=["amount_total", "subscription", "updated_at"])
+    _append_log(log, "invoice_synced", invoice_id=invoice.pk, stripe_invoice_id=invoice.provider_invoice_id, amount_total=invoice.amount_total, amount_due=invoice.amount_due, amount_paid=invoice.amount_paid)
 
-    payment_intent = _invoice_payment_intent(data)
-    if not payment_intent:
-        _append_log(log, "payment_sync_skipped", "ok", reason="invoice_has_no_payment_intent")
-        return invoice
+    payment_intent = _invoice_payment_intent(invoice_data)
+    if payment_intent:
+        payment_data = _stripe_retrieve("payment_intent", payment_intent)
+        payment_data["metadata"] = {**(invoice_data.get("metadata") or {}), **(payment_data.get("metadata") or {})}
+        payment = sync_payment_intent(payment_data)
+        if payment is None:
+            raise RuntimeError(f"Unable to associate Stripe PaymentIntent {payment_intent} with a local customer.")
+        if subscription:
+            payment.subscription = subscription
+        payment.provider_invoice_id = invoice.provider_invoice_id
+        if invoice.status == Invoice.Status.PAID or event_type in {"invoice.paid", "invoice.payment_succeeded"}:
+            payment.status = Payment.Status.SUCCEEDED
+            payment.paid_at = payment.paid_at or timezone.now()
+        elif event_type == "invoice.payment_failed":
+            payment.status = Payment.Status.FAILED
+        payment.save(update_fields=["subscription", "provider_invoice_id", "status", "paid_at", "updated_at"])
+        _append_log(log, "payment_synced", payment_id=payment.pk, stripe_payment_intent=payment_intent, amount=payment.amount)
+    elif invoice.status == Invoice.Status.PAID and event_type in {"invoice.paid", "invoice.payment_succeeded"}:
+        _create_invoice_settlement_payment(invoice, invoice_data, log)
 
-    payment_data = _stripe_retrieve("payment_intent", payment_intent)
-    payment_data["metadata"] = {**(data.get("metadata") or {}), **(payment_data.get("metadata") or {})}
-    payment = sync_payment_intent(payment_data)
-    if payment is None:
-        raise RuntimeError(f"Unable to associate Stripe PaymentIntent {payment_intent} with a local customer.")
-    if subscription:
-        payment.subscription = subscription
-    payment.provider_invoice_id = invoice.provider_invoice_id
-    if event_type in {"invoice.paid", "invoice.payment_succeeded"}:
-        payment.status = Payment.Status.SUCCEEDED
-        payment.paid_at = payment.paid_at or timezone.now()
-    elif event_type == "invoice.payment_failed":
-        payment.status = Payment.Status.FAILED
-    payment.save(update_fields=["subscription", "provider_invoice_id", "status", "paid_at", "updated_at"])
-    _append_log(log, "payment_synced", payment_id=payment.pk, stripe_payment_intent=payment_intent)
     return invoice
 
 
@@ -159,16 +215,8 @@ def process_stripe_webhook_event(webhook: WebhookEvent) -> None:
                     _append_log(log, "subscription_synced", subscription_id=subscription.pk, stripe_subscription_id=subscription_id)
                     invoice_id = str(data.get("invoice") or "")
                     if invoice_id:
-                        invoice = _process_invoice(_stripe_retrieve("invoice", invoice_id), "invoice.paid", log)
+                        invoice = _process_invoice({"id": invoice_id}, "invoice.paid", log)
                         _append_log(log, "checkout_invoice_reconciled", invoice_id=invoice.pk)
-                elif data.get("payment_intent") and data.get("payment_status") == "paid" and session.price.is_one_time:
-                    payment_data = _stripe_retrieve("payment_intent", str(data["payment_intent"]))
-                    payment_data["metadata"] = {**session.metadata, **(payment_data.get("metadata") or {})}
-                    payment = sync_payment_intent(payment_data)
-                    if not payment:
-                        raise RuntimeError("Unable to associate completed Checkout payment with a local customer.")
-                    create_or_update_one_time_subscription(payment, session.price)
-                    _append_log(log, "one_time_payment_reconciled", payment_id=payment.pk)
 
             elif event_type == "checkout.session.async_payment_succeeded":
                 session = CheckoutSession.objects.filter(provider=Provider.STRIPE, provider_session_id=data.get("id", "")).select_related("price").first()
