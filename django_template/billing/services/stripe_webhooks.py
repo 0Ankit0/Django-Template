@@ -47,6 +47,21 @@ def _append_log(log: list[dict[str, Any]], step: str, status: str = "ok", **deta
     log.append(entry)
 
 
+def _apply_subscription_item_period(subscription: Subscription, data: dict[str, Any]) -> Subscription:
+    """Support both legacy Stripe periods and current subscription-item periods."""
+    items = data.get("items", {}).get("data", [])
+    item = items[0] if items else {}
+    period_start = data.get("current_period_start") or item.get("current_period_start")
+    period_end = data.get("current_period_end") or item.get("current_period_end")
+    if period_start is not None:
+        subscription.current_period_start = _dt(period_start)
+    if period_end is not None:
+        subscription.current_period_end = _dt(period_end)
+    if period_start is not None or period_end is not None:
+        subscription.save(update_fields=["current_period_start", "current_period_end", "updated_at"])
+    return subscription
+
+
 def _process_invoice(data: dict[str, Any], event_type: str, log: list[dict[str, Any]]):
     subscription_id = str(data.get("subscription") or "")
     subscription = Subscription.objects.filter(
@@ -54,13 +69,16 @@ def _process_invoice(data: dict[str, Any], event_type: str, log: list[dict[str, 
         provider_subscription_id=subscription_id,
     ).first() if subscription_id else None
 
-    # Stripe does not guarantee webhook delivery order. If invoice.paid arrives
-    # before customer.subscription.created, hydrate the authoritative subscription
-    # from Stripe before creating the local invoice/payment records.
     if subscription_id and not subscription:
         _append_log(log, "subscription_dependency_missing", "retry", subscription_id=subscription_id)
-        subscription = sync_subscription(_stripe_retrieve("subscription", subscription_id))
+        remote_subscription = _stripe_retrieve("subscription", subscription_id)
+        subscription = sync_subscription(remote_subscription)
+        _apply_subscription_item_period(subscription, remote_subscription)
         _append_log(log, "subscription_reconciled", subscription_id=subscription.pk)
+    elif subscription_id:
+        remote_subscription = _stripe_retrieve("subscription", subscription_id)
+        subscription = _apply_subscription_item_period(subscription, remote_subscription)
+        _append_log(log, "subscription_period_reconciled", subscription_id=subscription.pk)
 
     invoice = sync_invoice(data)
     _append_log(log, "invoice_synced", invoice_id=invoice.pk, stripe_invoice_id=invoice.provider_invoice_id)
@@ -70,8 +88,6 @@ def _process_invoice(data: dict[str, Any], event_type: str, log: list[dict[str, 
         _append_log(log, "payment_sync_skipped", "ok", reason="invoice_has_no_payment_intent")
         return invoice
 
-    # Always retrieve the PaymentIntent from Stripe instead of trusting a possibly
-    # partial webhook object. This also makes retries idempotent.
     payment_data = _stripe_retrieve("payment_intent", payment_intent)
     payment_data["metadata"] = {**(data.get("metadata") or {}), **(payment_data.get("metadata") or {})}
     payment = sync_payment_intent(payment_data)
@@ -89,20 +105,16 @@ def _process_invoice(data: dict[str, Any], event_type: str, log: list[dict[str, 
 
 
 def process_stripe_webhook_event(webhook: WebhookEvent) -> None:
-    # Claim the event in a short transaction. The actual business transaction is
-    # separate so a failure cannot leave the event permanently marked as processing.
     with transaction.atomic():
         locked = WebhookEvent.objects.select_for_update().get(pk=webhook.pk)
-        if locked.processed:
-            return
-        if locked.processing:
+        if locked.processed or locked.processing:
             return
         locked.processing = True
         locked.error = ""
         locked.save(update_fields=["processing", "error"])
         log = list(locked.processing_log or [])
 
-    _append_log(log, "processing_started", attempt=len(log) + 1)
+    _append_log(log, "processing_started", attempt=sum(1 for item in log if item.get("step") == "processing_started") + 1)
     try:
         with transaction.atomic():
             event = locked.payload
@@ -111,10 +123,7 @@ def process_stripe_webhook_event(webhook: WebhookEvent) -> None:
             _append_log(log, "event_loaded", event_type=event_type, stripe_object_id=data.get("id"))
 
             if event_type == "checkout.session.completed":
-                session = CheckoutSession.objects.filter(
-                    provider=Provider.STRIPE,
-                    provider_session_id=data.get("id", ""),
-                ).select_related("price").first()
+                session = CheckoutSession.objects.filter(provider=Provider.STRIPE, provider_session_id=data.get("id", "")).select_related("price").first()
                 if not session:
                     raise ValueError(f"Local CheckoutSession not found for {data.get('id')}")
                 session.status = data.get("status", "complete")
@@ -129,9 +138,12 @@ def process_stripe_webhook_event(webhook: WebhookEvent) -> None:
 
                 if session.mode == CheckoutSession.Mode.SUBSCRIPTION:
                     subscription_id = str(data.get("subscription") or session.metadata.get("subscription_id") or "")
-                    if subscription_id:
-                        subscription = sync_subscription(_stripe_retrieve("subscription", subscription_id))
-                        _append_log(log, "subscription_synced", subscription_id=subscription.pk, stripe_subscription_id=subscription_id)
+                    if not subscription_id:
+                        raise ValueError(f"Completed subscription CheckoutSession {session.pk} has no Stripe subscription ID.")
+                    remote_subscription = _stripe_retrieve("subscription", subscription_id)
+                    subscription = sync_subscription(remote_subscription)
+                    _apply_subscription_item_period(subscription, remote_subscription)
+                    _append_log(log, "subscription_synced", subscription_id=subscription.pk, stripe_subscription_id=subscription_id)
                     invoice_id = str(data.get("invoice") or "")
                     if invoice_id:
                         invoice = _process_invoice(_stripe_retrieve("invoice", invoice_id), "invoice.paid", log)
@@ -164,7 +176,9 @@ def process_stripe_webhook_event(webhook: WebhookEvent) -> None:
                 _append_log(log, "checkout_session_expired", stripe_session_id=data.get("id"))
 
             elif event_type in {"customer.subscription.created", "customer.subscription.updated", "customer.subscription.paused", "customer.subscription.resumed", "customer.subscription.pending_update_applied"}:
-                subscription = sync_subscription(data)
+                subscription_data = _stripe_retrieve("subscription", str(data.get("id")))
+                subscription = sync_subscription(subscription_data)
+                _apply_subscription_item_period(subscription, subscription_data)
                 _append_log(log, "subscription_synced", subscription_id=subscription.pk, stripe_subscription_id=subscription.provider_subscription_id)
 
             elif event_type == "customer.subscription.pending_update_expired":
@@ -215,19 +229,8 @@ def process_stripe_webhook_event(webhook: WebhookEvent) -> None:
                 _append_log(log, "event_ignored", "ok", event_type=event_type)
 
         _append_log(log, "processing_completed", processed=True)
-        WebhookEvent.objects.filter(pk=locked.pk).update(
-            processing=False,
-            processed=True,
-            processed_at=timezone.now(),
-            error="",
-            processing_log=log,
-        )
+        WebhookEvent.objects.filter(pk=locked.pk).update(processing=False, processed=True, processed_at=timezone.now(), error="", processing_log=log)
     except Exception as exc:
         _append_log(log, "processing_failed", "error", error=str(exc), error_type=type(exc).__name__)
-        WebhookEvent.objects.filter(pk=locked.pk).update(
-            processing=False,
-            processed=False,
-            error=str(exc),
-            processing_log=log,
-        )
+        WebhookEvent.objects.filter(pk=locked.pk).update(processing=False, processed=False, error=str(exc), processing_log=log)
         raise
