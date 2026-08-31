@@ -210,6 +210,7 @@ class Invoice(models.Model):
     provider_invoice_id = models.CharField(max_length=255, null=True, blank=True, editable=False, unique=True)
     number = models.CharField(max_length=255, blank=True)
     status = models.CharField(max_length=32, choices=Status.choices)
+    amount_total = models.PositiveBigIntegerField(default=0)
     amount_due = models.PositiveBigIntegerField(default=0)
     amount_paid = models.PositiveBigIntegerField(default=0)
     currency = models.CharField(max_length=3, choices=Currency.choices, default=Currency.NPR)
@@ -226,6 +227,13 @@ class Invoice(models.Model):
     class Meta:
         ordering = ["-created_at"]
         constraints = [models.UniqueConstraint(fields=["provider", "provider_invoice_id"], name="billing_invoice_provider_id_unique")]
+
+    @property
+    def settled_amount(self) -> int:
+        """Amount economically settled for the invoice, not the remaining balance."""
+        if self.status == self.Status.PAID:
+            return self.amount_total or self.amount_paid
+        return self.amount_paid
 
     def __str__(self) -> str:
         return self.number or self.provider_invoice_id or str(self.pk)
