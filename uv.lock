@@ -570,15 +570,15 @@ wheels = [
 
 [[package]]
 name = "dj-control-room"
-version = "1.6.0"
+version = "1.7.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dj-control-room-base" },
     { name = "django" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/35/3b/2b610b2d194a6cd3eaf42482665031ea2112450cb3f056d32168416ae9eb/dj_control_room-1.6.0.tar.gz", hash = "sha256:506b0fbb35816f62161da9a1bd5dcffc008e66c0e0abf8af410e7b1fb33c20bd", size = 1450815, upload-time = "2026-08-04T18:06:47.207Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3f/35/b5dc9e52593661486ccbb95e3b848f093cef1b8de509289776a21e4a9544/dj_control_room-1.7.1.tar.gz", hash = "sha256:d9ff66f74c7d11ffbab8ebc30c6404783660de47995256aa4eb2e5fc2403e848", size = 1448461, upload-time = "2026-08-11T17:29:47.723Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/fb/44/7128e850fa0f9866a503a8a0dc031b41f7040c70c86f1ae760a0f679e9bb/dj_control_room-1.6.0-py3-none-any.whl", hash = "sha256:5bd2dd9e0f831508b9387fbcacdc40900598c9b0731f04f1e52ce8a4b61ddc1f", size = 1440963, upload-time = "2026-08-04T18:06:45.428Z" },
+    { url = "https://files.pythonhosted.org/packages/e6/db/f9c8cb0bb6392aa8ac87d952f4c0cc6d3591e03f96e8d8c36cbf62833c22/dj_control_room-1.7.1-py3-none-any.whl", hash = "sha256:c36c7c0c66f1023c8b1cf74480dd6350a6098a3623dd0b4f553d07637b57f47b", size = 1439645, upload-time = "2026-08-11T17:29:45.544Z" },
 ]
 
 [package.optional-dependencies]
@@ -1013,7 +1013,7 @@ requires-dist = [
     { name = "argon2-cffi", specifier = "==25.1.0" },
     { name = "celery", specifier = "==5.6.3" },
     { name = "crispy-bootstrap5", specifier = "==2026.3" },
-    { name = "dj-control-room", extras = ["cache", "celery", "redis", "urls"], specifier = ">=1.6.0" },
+    { name = "dj-control-room", extras = ["cache", "celery", "redis", "urls"], specifier = ">=1.7.1" },
     { name = "dj-signals-panel", specifier = ">=0.6.0" },
     { name = "django", specifier = "==6.0.7" },
     { name = "django-allauth", extras = ["mfa"], specifier = "==65.19.1" },
