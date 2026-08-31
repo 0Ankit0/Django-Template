@@ -62,12 +62,23 @@ def _apply_subscription_item_period(subscription: Subscription, data: dict[str, 
     return subscription
 
 
+def _invoice_payment_intent(data: dict[str, Any]) -> str:
+    """Return the payment intent from both legacy and modern Stripe Invoice shapes."""
+    direct = data.get("payment_intent")
+    if direct:
+        return str(direct)
+    payments = data.get("payments", {}).get("data", [])
+    for invoice_payment in payments:
+        payment = invoice_payment.get("payment") or {}
+        payment_intent = payment.get("payment_intent") or invoice_payment.get("payment_intent")
+        if payment_intent:
+            return str(payment_intent)
+    return ""
+
+
 def _process_invoice(data: dict[str, Any], event_type: str, log: list[dict[str, Any]]):
     subscription_id = str(data.get("subscription") or "")
-    subscription = Subscription.objects.filter(
-        provider=Provider.STRIPE,
-        provider_subscription_id=subscription_id,
-    ).first() if subscription_id else None
+    subscription = Subscription.objects.filter(provider=Provider.STRIPE, provider_subscription_id=subscription_id).first() if subscription_id else None
 
     if subscription_id and not subscription:
         _append_log(log, "subscription_dependency_missing", "retry", subscription_id=subscription_id)
@@ -83,7 +94,7 @@ def _process_invoice(data: dict[str, Any], event_type: str, log: list[dict[str, 
     invoice = sync_invoice(data)
     _append_log(log, "invoice_synced", invoice_id=invoice.pk, stripe_invoice_id=invoice.provider_invoice_id)
 
-    payment_intent = str(data.get("payment_intent") or "")
+    payment_intent = _invoice_payment_intent(data)
     if not payment_intent:
         _append_log(log, "payment_sync_skipped", "ok", reason="invoice_has_no_payment_intent")
         return invoice
@@ -93,13 +104,15 @@ def _process_invoice(data: dict[str, Any], event_type: str, log: list[dict[str, 
     payment = sync_payment_intent(payment_data)
     if payment is None:
         raise RuntimeError(f"Unable to associate Stripe PaymentIntent {payment_intent} with a local customer.")
+    if subscription:
+        payment.subscription = subscription
     payment.provider_invoice_id = invoice.provider_invoice_id
     if event_type in {"invoice.paid", "invoice.payment_succeeded"}:
         payment.status = Payment.Status.SUCCEEDED
         payment.paid_at = payment.paid_at or timezone.now()
     elif event_type == "invoice.payment_failed":
         payment.status = Payment.Status.FAILED
-    payment.save(update_fields=["provider_invoice_id", "status", "paid_at", "updated_at"])
+    payment.save(update_fields=["subscription", "provider_invoice_id", "status", "paid_at", "updated_at"])
     _append_log(log, "payment_synced", payment_id=payment.pk, stripe_payment_intent=payment_intent)
     return invoice
 
