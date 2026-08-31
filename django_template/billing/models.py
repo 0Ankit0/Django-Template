@@ -192,8 +192,12 @@ class Payment(models.Model):
         constraints = [models.UniqueConstraint(fields=["provider", "provider_payment_id"], name="billing_payment_provider_id_unique")]
         indexes = [models.Index(fields=["tenant", "status"])]
 
+    @property
+    def amount_decimal(self) -> Decimal:
+        return Decimal(self.amount) / Decimal("100")
+
     def __str__(self) -> str:
-        return f"{self.amount / 100:.2f} {self.currency.upper()} - {self.status}"
+        return f"{self.amount_decimal:.2f} {self.currency.upper()} - {self.status}"
 
 
 class Invoice(models.Model):
@@ -230,10 +234,13 @@ class Invoice(models.Model):
 
     @property
     def settled_amount(self) -> int:
-        """Amount economically settled for the invoice, not the remaining balance."""
         if self.status == self.Status.PAID:
             return self.amount_total or self.amount_paid
         return self.amount_paid
+
+    @property
+    def settled_amount_decimal(self) -> Decimal:
+        return Decimal(self.settled_amount) / Decimal("100")
 
     def __str__(self) -> str:
         return self.number or self.provider_invoice_id or str(self.pk)
