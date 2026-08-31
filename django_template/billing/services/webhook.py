@@ -5,8 +5,9 @@ from typing import Any
 import stripe
 from django.conf import settings
 from django.db import transaction
-
-from ..models import Provider, WebhookEvent
+from django.core.serializers.json import DjangoJSONEncoder
+import json
+from django_template.billing.models import Provider, WebhookEvent
 
 
 def handle_webhook(payload: bytes, signature: str) -> WebhookEvent:
@@ -17,7 +18,10 @@ def handle_webhook(payload: bytes, signature: str) -> WebhookEvent:
         event = stripe.Webhook.construct_event(payload, signature, secret)
     except (ValueError, stripe.SignatureVerificationError) as exc:
         raise ValueError("Invalid Stripe webhook signature or payload.") from exc
-    event_data: dict[str, Any] = event.to_dict_recursive() if hasattr(event, "to_dict_recursive") else dict(event)
+    # event_data: dict[str, Any] = event.to_dict_recursive() if hasattr(event, "to_dict_recursive") else dict(event)
+    event_data = json.loads(
+        json.dumps(event.to_dict(), cls=DjangoJSONEncoder)
+    )
     with transaction.atomic():
         webhook, created = WebhookEvent.objects.get_or_create(
             provider=Provider.STRIPE,

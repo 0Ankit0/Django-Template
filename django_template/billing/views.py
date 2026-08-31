@@ -17,6 +17,9 @@ from .services import cancel_subscription, create_checkout_session, create_esewa
 from .services import create_or_update_one_time_subscription, create_portal_session, esewa_status, get_current_subscription
 from .services import handle_webhook, khalti_lookup, verify_esewa_response
 from .tasks import generate_local_invoice
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def provider_enabled(provider: str) -> bool:
@@ -216,7 +219,9 @@ def webhook(request: HttpRequest) -> HttpResponse:
     try:
         handle_webhook(request.body, request.headers.get("Stripe-Signature", ""))
     except (ValueError, json.JSONDecodeError):
+        logger.exception("Invalid webhook payload")
         return JsonResponse({"detail": "Invalid webhook."}, status=400)
     except Exception:
+        logger.exception("Webhook processing failed")
         return JsonResponse({"detail": "Webhook processing failed."}, status=500)
     return JsonResponse({"received": True})

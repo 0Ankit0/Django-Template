@@ -74,7 +74,7 @@ services:
   postgres:
     build:
       context: .
-      dockerfile: ./compose/local/postgres/Dockerfile
+      dockerfile: ./compose/production/postgres/Dockerfile
     image: django_template_local_postgres
     container_name: django_template_local_postgres
     volumes:

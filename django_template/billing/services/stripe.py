@@ -60,7 +60,7 @@ def create_stripe_product(product: Product) -> Product:
         _stripe_client().v1.products.create(
             {
                 "name": product.name,
-                "description": product.description,
+                "description": product.description or "Test",
                 "active": product.active,
                 "metadata": {
                     "local_product_id": str(product.pk),
