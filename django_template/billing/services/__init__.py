@@ -9,7 +9,6 @@ from .providers import (
     verify_esewa_response,
 )
 from .stripe import (
-    _add_interval,
     _dt,
     _price_from_event,
     _stripe_client,

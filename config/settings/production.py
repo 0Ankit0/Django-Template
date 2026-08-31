@@ -83,7 +83,7 @@ INSTALLED_APPS += ["anymail"]
 EMAIL_BACKEND = "anymail.backends.smtp.EmailBackend"
 ANYMAIL = {}
 INSTALLED_APPS += ["django_template.billing"]
-STRIPE_SECRET_KEY = env.str("STRIPE_SECRET_KEY", default="")
+STRIPE_API_KEY = env.str("STRIPE_API_KEY", default="")
 STRIPE_PUBLISHABLE_KEY = env.str("STRIPE_PUBLISHABLE_KEY", default="")
 STRIPE_WEBHOOK_SECRET = env.str("STRIPE_WEBHOOK_SECRET", default="")
 

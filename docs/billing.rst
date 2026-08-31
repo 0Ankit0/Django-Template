@@ -47,7 +47,7 @@ Set these values in the Django environment:
 
 ``BILLING_STRIPE_ENABLED``
     Enable or disable Stripe.
-``STRIPE_SECRET_KEY`` / ``STRIPE_PUBLISHABLE_KEY`` / ``STRIPE_WEBHOOK_SECRET``
+``STRIPE_API_KEY`` / ``STRIPE_PUBLISHABLE_KEY`` / ``STRIPE_WEBHOOK_SECRET``
     Stripe credentials and webhook signing secret.
 ``BILLING_KHALTI_ENABLED`` / ``KHALTI_SECRET_KEY`` / ``KHALTI_ENVIRONMENT``
     Khalti configuration. Use ``sandbox`` while testing.

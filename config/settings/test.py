@@ -38,7 +38,7 @@ MEDIA_URL = "http://media.testserver/"
 # Billing
 # ------------------------------------------------------------------------------
 INSTALLED_APPS += ["django_template.billing"]
-STRIPE_SECRET_KEY = env.str("STRIPE_SECRET_KEY", default="sk_test_placeholder")
+STRIPE_API_KEY = env.str("STRIPE_API_KEY", default="sk_test_placeholder")
 STRIPE_PUBLISHABLE_KEY = env.str("STRIPE_PUBLISHABLE_KEY", default="pk_test_placeholder")
 STRIPE_WEBHOOK_SECRET = env.str("STRIPE_WEBHOOK_SECRET", default="whsec_test_placeholder")
 

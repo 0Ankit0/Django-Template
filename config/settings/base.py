@@ -2,7 +2,7 @@
 """Base settings to build other settings files upon."""
 from django.urls import reverse_lazy
 from django.utils.translation import gettext_lazy as _
-
+from rest_framework.permissions import DjangoModelPermissions
 import ssl
 from pathlib import Path
 
@@ -232,9 +232,9 @@ DJANGO_ADMIN_FORCE_ALLAUTH = env.bool("DJANGO_ADMIN_FORCE_ALLAUTH", default=Fals
 
 # Billing providers
 BILLING_STRIPE_ENABLED = env.bool("BILLING_STRIPE_ENABLED", default=True)
-STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY", default="")
+STRIPE_API_KEY = env("STRIPE_API_KEY", default="")
 STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY", default="")
-STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default="")
+STRIPE_WEBHOOK_SECRET = env("STRIPE_WEBHOOK_SECRET", default="whsec_993071f4305f82136b251aea1810168054c49b9e7be7bf83854e1ea5cd10e378")
 BILLING_KHALTI_ENABLED = env.bool("BILLING_KHALTI_ENABLED", default=True)
 KHALTI_SECRET_KEY = env("KHALTI_SECRET_KEY", default="")
 KHALTI_ENVIRONMENT = env("KHALTI_ENVIRONMENT", default="sandbox")
@@ -315,7 +315,7 @@ REST_FRAMEWORK = {
         "rest_framework.authentication.SessionAuthentication",
         "rest_framework.authentication.TokenAuthentication",
     ),
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
+    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated", "rest_framework.permissions.DjangoModelPermissions"),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
 CORS_URLS_REGEX = r"^/api/.*$"
@@ -323,6 +323,7 @@ SPECTACULAR_SETTINGS = {
     "TITLE": "django-template API",
     "DESCRIPTION": "Documentation of API endpoints of django-template",
     "VERSION": "1.0.0",
+    "TOS": None,
     "SERVE_PERMISSIONS": ["rest_framework.permissions.IsAdminUser"],
     "SCHEMA_PATH_PREFIX": "/api/",
 }

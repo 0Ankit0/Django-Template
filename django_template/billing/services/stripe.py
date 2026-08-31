@@ -15,9 +15,9 @@ from ..models import BillingCustomer, CheckoutSession, Invoice, Payment, Price, 
 
 
 def _stripe_client() -> stripe.StripeClient:
-    key = getattr(settings, "STRIPE_SECRET_KEY", "")
+    key = getattr(settings, "STRIPE_API_KEY", "")
     if not key:
-        raise RuntimeError("STRIPE_SECRET_KEY is not configured.")
+        raise RuntimeError("STRIPE_API_KEY is not configured.")
     return stripe.StripeClient(key)
 
 

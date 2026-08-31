@@ -19,12 +19,12 @@ class ProductFeatureInline(TabularInline):
 
 @admin.register(Product)
 class ProductAdmin(ModelAdmin):
-    list_display = ["name", "slug", "active", "created_at"]
+    list_display = ["name", "slug","provider_product_id", "active", "created_at"]
     list_filter = ["active"]
     search_fields = ["name", "slug"]
     prepopulated_fields = {"slug": ("name",)}
     inlines = [PriceInline, ProductFeatureInline]
-    readonly_fields = ["created_at", "updated_at"]
+    readonly_fields = ["created_at", "updated_at", "provider_product_id"]
 
 
 @admin.register(Price)

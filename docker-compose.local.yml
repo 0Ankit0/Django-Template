@@ -37,6 +37,16 @@ services:
       - "8000:8000"
     command: ["/bin/bash", "/app/compose/local/django/start"]
 
+
+  stripe-cli:
+    image: stripe/stripe-cli:latest
+    container_name: django_template_local_stripe_cli
+    depends_on:
+      - django
+    env_file:
+      - ./.envs/.local/.django
+    command: listen --forward-to http://django:8000/billing/webhooks/stripe/
+
   migrations:
     <<: *django
     image: django_template_local_migrations
@@ -64,8 +74,8 @@ services:
   postgres:
     build:
       context: .
-      dockerfile: ./compose/production/postgres/Dockerfile
-    image: django_template_production_postgres
+      dockerfile: ./compose/local/postgres/Dockerfile
+    image: django_template_local_postgres
     container_name: django_template_local_postgres
     volumes:
       - django_template_local_postgres_data:/var/lib/postgresql/18/docker

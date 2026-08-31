@@ -147,8 +147,8 @@ class BillingCustomer(models.Model):
         editable=False,
         unique=True,
     )
-    email = models.EmailField(blank=True)
-    name = models.CharField(max_length=255, blank=True)
+    email = models.EmailField()
+    name = models.CharField(max_length=255)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

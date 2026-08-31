@@ -23,7 +23,7 @@ SENTRY_DEFAULT_ISSUES_QUERY=is:unresolved
 # Stripe test mode
 # ------------------------------------------------------------------------------
 BILLING_STRIPE_ENABLED=True
-STRIPE_SECRET_KEY=
+STRIPE_API_KEY=
 STRIPE_PUBLISHABLE_KEY=
 STRIPE_WEBHOOK_SECRET=
 
