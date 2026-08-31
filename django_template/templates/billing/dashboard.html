@@ -48,7 +48,7 @@
         <div class="space-y-3">
           {% for payment in payments %}
             <div class="flex items-center justify-between border-b pb-3 last:border-0">
-              <div><div class="font-medium">{{ payment.amount|floatformat:0 }} {{ payment.currency|upper }}</div><div class="text-xs text-muted-foreground">{{ payment.provider|upper }} · {{ payment.created_at }}</div></div>
+              <div><div class="font-medium">{{ payment.amount_decimal|floatformat:2 }} {{ payment.currency|upper }}</div><div class="text-xs text-muted-foreground">{{ payment.provider|upper }} · {{ payment.created_at }}</div></div>
               <span>{{ payment.get_status_display }}</span>
             </div>
           {% empty %}<p class="text-sm text-muted-foreground">No payments yet.</p>{% endfor %}
@@ -64,7 +64,7 @@
             <div class="flex items-center justify-between border-b pb-3 last:border-0">
               <div>
                 <div class="font-medium">{{ invoice.number|default:invoice.provider_invoice_id }}</div>
-                <div class="text-xs text-muted-foreground">{{ invoice.amount_paid }} {{ invoice.currency|upper }} · {{ invoice.provider|upper }}</div>
+                <div class="text-xs text-muted-foreground">{{ invoice.settled_amount_decimal|floatformat:2 }} {{ invoice.currency|upper }} · {{ invoice.provider|upper }}</div>
               </div>
               {% if invoice.invoice_pdf %}
                 <a class="underline" href="{{ invoice.invoice_pdf }}">Download</a>
