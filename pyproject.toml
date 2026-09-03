@@ -32,7 +32,7 @@ dependencies = [
   "django-model-utils==5.0.0",
   "django-redis==7.0.0",
   "django-storages[s3]==1.14.6",
-  "django-tailwind-cli>=4.7.0",
+  "django-tailwind-cli>=4.8.0",
   "django-tenant-users>=2.2.1",
   "django-tenants>=3.14.0",
   "django-unfold>=0.104.1",
@@ -53,7 +53,7 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-  "coverage==7.15.4",
+  "coverage==7.16.0",
   "django-coverage-plugin==3.2.2",
   "django-debug-toolbar==7.1.1",
   "django-extensions==4.1",
